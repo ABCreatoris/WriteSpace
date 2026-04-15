@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Self-host: drop WOFF2 files into public/fonts/ (see public/fonts/FONTS.txt). */
+@font-face {
+  font-family: "Noto Serif SC";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/noto-serif-sc-300.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Serif SC";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/noto-serif-sc-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Serif SC";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/noto-serif-sc-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "LXGW WenKai Lite";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/lxgw-wenkai-lite-400.woff2") format("woff2");
+}
+
+@layer base {
+  textarea {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: inherit;
+    line-height: 1.8;
+  }
+}
+
+@layer utilities {
+  /* Text only: 1rem bands at top/bottom; alpha eases in over 1rem (edge reads like more “blur”) */
+  .writespace-text-fade {
+    mask-mode: alpha;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      rgba(0, 0, 0, 0.12) calc(1rem * 0.2),
+      rgba(0, 0, 0, 0.35) calc(1rem * 0.4),
+      rgba(0, 0, 0, 0.62) calc(1rem * 0.65),
+      rgba(0, 0, 0, 0.88) calc(1rem * 0.85),
+      #000 1rem,
+      #000 calc(100% - 1rem),
+      rgba(0, 0, 0, 0.88) calc(100% - 1rem * 0.85),
+      rgba(0, 0, 0, 0.62) calc(100% - 1rem * 0.65),
+      rgba(0, 0, 0, 0.35) calc(100% - 1rem * 0.4),
+      rgba(0, 0, 0, 0.12) calc(100% - 1rem * 0.2),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      rgba(0, 0, 0, 0.12) calc(1rem * 0.2),
+      rgba(0, 0, 0, 0.35) calc(1rem * 0.4),
+      rgba(0, 0, 0, 0.62) calc(1rem * 0.65),
+      rgba(0, 0, 0, 0.88) calc(1rem * 0.85),
+      #000 1rem,
+      #000 calc(100% - 1rem),
+      rgba(0, 0, 0, 0.88) calc(100% - 1rem * 0.85),
+      rgba(0, 0, 0, 0.62) calc(100% - 1rem * 0.65),
+      rgba(0, 0, 0, 0.35) calc(100% - 1rem * 0.4),
+      rgba(0, 0, 0, 0.12) calc(100% - 1rem * 0.2),
+      transparent 100%
+    );
+    -webkit-mask-size: 100% 100%;
+    mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

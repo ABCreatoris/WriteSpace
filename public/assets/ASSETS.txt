@@ -1,0 +1,23 @@
+媒体路径见 src/config/assets.ts（均在 public/ 下）。
+
+底图
+  assets/rain-bg.jpg        — 雨（原始）
+  assets/snow-bg.jpg        — 雪（原始）
+  assets/fog-bg.jpg         — 雾（由 rain 模糊/降饱和生成，可替换）
+  assets/snow-wind-bg.jpg    — 风（由 snow 锐化/微调，风雪前景，可替换）
+  assets/thunder-bg.jpg     — 雷（由 rain 压暗/偏紫调生成，可替换）
+
+环境音（循环）
+  assets/audio/rain.mp3     — 雨
+  assets/audio/fog.mp3      — 雾（偏高频水滴感，由 rain 滤波生成，可替换）
+  assets/audio/snow.mp3     — 雪
+  assets/audio/wind.mp3     — 风（粉噪低通，可替换）
+  assets/audio/thunder.mp3  — 雷环境（Mixkit：Thunder rumble during a storm，可替换）
+  assets/audio/lightning1.mp3 — 雷击采样 A（Mixkit 近/中距 thunder + 处理）
+  assets/audio/lightning2.mp3 — 雷击采样 B（Mixkit Distant thunder explosion + 处理）
+  assets/audio/lightning3.mp3 — 雷击采样 C（Mixkit Distant thunder storm explosion + 处理）
+  （以上许可见 https://mixkit.co/license/#sfxFree ；播放时随机其一，高「雷暴」滑块偶发连击第二声）
+
+旧版 mist / blizzard 若仍留在 audio 目录可手动删除，已不再引用。
+
+字体：public/fonts/ — 见 public/fonts/FONTS.txt

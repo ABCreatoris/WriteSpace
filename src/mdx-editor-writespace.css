@@ -1,0 +1,187 @@
+/* WriteSpace: dark glass shell for MDXEditor (toolbar-less WYSIWYG) */
+.writespace-mdx-editor {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.writespace-mdx-editor .mdxeditor {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] {
+  caret-color: rgba(255, 255, 240, 0.85);
+}
+
+/*
+ * MDXEditor 占位符是 CSS Modules 类名（如 _placeholder_xxx），没有字面量 .placeholder；
+ * 同时 MDX 默认 color: var(--baseSolid)。用 [class*="_placeholder_"] 覆盖。
+ */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [class*="_placeholder_"] {
+  color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [class*="_placeholder_"] p {
+  color: inherit !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Prose-like blocks: undo Tailwind preflight + match WriteSpace glass tone   */
+/* Scoped to the Lexical contenteditable root.                              */
+/* -------------------------------------------------------------------------- */
+
+/* 与 flow-space textarea 的 text-white/75 一致 */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] > *:first-child {
+  margin-top: 0 !important;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] p {
+  margin: 0.35em 0;
+}
+
+/* Headings (@lexical/rich-text HeadingNode → h1–h6) */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h1,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h2,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h3,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h4,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h5,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h6 {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h1 {
+  font-size: 1.34em;
+  margin: 0.9em 0 0.36em;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h2 {
+  font-size: 1.24em;
+  margin: 0.82em 0 0.34em;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h3 {
+  font-size: 1.16em;
+  margin: 0.75em 0 0.32em;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h4 {
+  font-size: 1.09em;
+  margin: 0.68em 0 0.28em;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h5 {
+  font-size: 1.04em;
+  margin: 0.6em 0 0.26em;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h6 {
+  font-size: 1em;
+  margin: 0.55em 0 0.24em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Block quote */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] blockquote {
+  margin: 0.65em 0;
+  padding: 0.35em 0 0.35em 1rem;
+  border-left: 3px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.68);
+  font-style: italic;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] blockquote p {
+  margin: 0.25em 0;
+}
+
+/* Thematic break */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] hr {
+  margin: 1.25em 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* Links */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] a {
+  color: rgba(186, 220, 255, 0.95);
+  text-decoration: underline;
+  text-decoration-color: rgba(186, 220, 255, 0.35);
+  text-underline-offset: 0.15em;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] a:hover {
+  color: rgba(230, 242, 255, 1);
+  text-decoration-color: rgba(230, 242, 255, 0.55);
+}
+
+/* Lists: restore markers killed by Tailwind preflight (ol, ul { list-style: none }) */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ol {
+  list-style: decimal;
+  list-style-position: outside;
+  padding-inline-start: 1.45em;
+  margin: 0.5em 0;
+}
+
+/* Bullet lists only — Lexical checklists use li[role="checkbox"] (no disc) */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ul:not(:has(> li[role="checkbox"])) {
+  list-style: disc;
+  list-style-position: outside;
+  padding-inline-start: 1.35em;
+  margin: 0.5em 0;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ul:not(:has(> li[role="checkbox"])) ul {
+  list-style-type: circle;
+  margin: 0.2em 0;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ul:not(:has(> li[role="checkbox"])) ul ul {
+  list-style-type: square;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ol > li,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ul:not(:has(> li[role="checkbox"])) > li {
+  display: list-item;
+  margin: 0.2em 0;
+}
+
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] ul:has(> li[role="checkbox"]) {
+  list-style: none;
+  padding-inline-start: 0;
+  margin: 0.5em 0;
+}
+
+/* CodeMirror code blocks inside editor */
+.writespace-mdx-editor .mdxeditor .cm-editor {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0.65em 0;
+  font-size: 0.88em;
+}
+
+.writespace-mdx-editor .mdxeditor .cm-editor .cm-content {
+  padding: 0.65rem 0.75rem;
+}
