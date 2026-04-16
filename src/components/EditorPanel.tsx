@@ -14,8 +14,6 @@ import {
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import "@mdxeditor/editor/style.css";
 import { AnimatePresence, motion } from "framer-motion";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import { marked } from "marked";
 import {
   useCallback,
@@ -27,6 +25,8 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { cn } from "../lib/cn";
+import { parseMarkdownBlocks } from "../lib/markdownBlocks";
+import { generateVectorPdfBlob } from "../pdf/vectorPdfExport";
 import "../mdx-editor-writespace.css";
 import type { FontFamilyId, FontSizeId } from "./FontBar";
 
@@ -49,65 +49,6 @@ type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 /** Symmetric panel: center + size (viewport px) */
 type PanelState = { cx: number; cy: number; w: number; h: number };
-
-type MdBlock =
-  | { kind: "h"; level: 1 | 2 | 3 | 4 | 5 | 6; text: string }
-  | { kind: "ul"; text: string }
-  | { kind: "ol"; text: string }
-  | { kind: "p"; text: string };
-
-function decodeHtmlEntities(input: string): string {
-  const el = document.createElement("textarea");
-  el.innerHTML = input;
-  return el.value;
-}
-
-function stripInlineMarkdown(input: string): string {
-  return decodeHtmlEntities(
-    input
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/__([^_]+)__/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .trim(),
-  );
-}
-
-function parseMarkdownBlocks(markdown: string): MdBlock[] {
-  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
-  const blocks: MdBlock[] = [];
-  for (const raw of lines) {
-    const line = raw.trimEnd();
-    if (!line.trim()) {
-      blocks.push({ kind: "p", text: "" });
-      continue;
-    }
-    const h = line.match(/^(#{1,6})\s+(.+)$/);
-    if (h) {
-      blocks.push({
-        kind: "h",
-        level: h[1]!.length as 1 | 2 | 3 | 4 | 5 | 6,
-        text: stripInlineMarkdown(h[2]!),
-      });
-      continue;
-    }
-    const ul = line.match(/^[-*+]\s+(.+)$/);
-    if (ul) {
-      blocks.push({ kind: "ul", text: stripInlineMarkdown(ul[1]!) });
-      continue;
-    }
-    const ol = line.match(/^\d+[.)]\s+(.+)$/);
-    if (ol) {
-      blocks.push({ kind: "ol", text: stripInlineMarkdown(ol[1]!) });
-      continue;
-    }
-    blocks.push({ kind: "p", text: stripInlineMarkdown(line) });
-  }
-  return blocks;
-}
 
 function sanitizeHtml(input: string): string {
   return input
@@ -132,26 +73,10 @@ function markdownToPlainText(markdown: string): string {
   return host.textContent?.replace(/\u00a0/g, " ").trim() ?? "";
 }
 
-function exportFontStack(font: FontFamilyId): string {
-  if (font === "songti") {
-    return '"Noto Serif SC","Source Han Serif SC","Songti SC","STSong",serif';
-  }
-  if (font === "xinwei") {
-    return '"STXinwei","HanziPen SC","DFKai-SB","LXGW WenKai Lite","Kaiti SC",serif';
-  }
-  return '"LXGW WenKai Lite","Kaiti SC","STKaiti","KaiTi","Noto Serif SC","Songti SC",serif';
-}
-
 function wordFontName(font: FontFamilyId): string {
   if (font === "songti") return "宋体";
   if (font === "xinwei") return "华文新魏";
   return "楷体";
-}
-
-function exportBasePx(size: FontSizeId): number {
-  if (size === "large") return 16;
-  if (size === "medium") return 14;
-  return 13;
 }
 
 function wordBodyHalfPt(size: FontSizeId): number {
@@ -402,86 +327,14 @@ export function EditorPanel({
   const downloadPdf = useCallback(async () => {
     if (!text.trim()) return;
     setSaveMenuOpen(false);
-    const basePx = exportBasePx(fontSize);
-    const renderedMarkdown = markdownToRenderedHtml(text);
-    const host = document.createElement("div");
-    host.setAttribute("aria-hidden", "true");
-    host.style.position = "fixed";
-    host.style.left = "0";
-    host.style.top = "0";
-    host.style.width = "794px";
-    host.style.pointerEvents = "none";
-    host.style.opacity = "0";
-    host.style.zIndex = "-1";
-    host.style.overflow = "hidden";
-    host.innerHTML = `<style>
-      .ws-export{color:#111;font-size:${basePx}px;line-height:1.62;letter-spacing:0.01em;word-break:break-word;font-family:${exportFontStack(fontFamily)};padding:28px 32px;background:#fff;}
-      .ws-export *{font-family:inherit;}
-      .ws-export h1{font-size:${Math.round(basePx * 2.0)}px;line-height:1.22;margin:0 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
-      .ws-export h2{font-size:${Math.round(basePx * 1.65)}px;line-height:1.3;margin:10px 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
-      .ws-export h3{font-size:${Math.round(basePx * 1.4)}px;line-height:1.32;margin:8px 0 8px;font-weight:700;break-after:avoid-page;}
-      .ws-export h4,.ws-export h5,.ws-export h6{font-size:${Math.round(basePx * 1.2)}px;line-height:1.32;margin:7px 0 7px;font-weight:700;break-after:avoid-page;}
-      .ws-export p{margin:0 0 9px;}
-      .ws-export code{background:#f3f3f3;border-radius:4px;padding:1px 4px;font-family:Menlo,Monaco,monospace;font-size:12px;}
-      .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:8px 10px;overflow:auto;break-inside:avoid;}
-      .ws-export pre code{background:transparent;padding:0;border-radius:0;}
-      .ws-export blockquote{margin:8px 0;padding:4px 0 4px 10px;border-left:3px solid #cfcfcf;color:#444;break-inside:avoid;}
-      .ws-export a{color:#0f4fad;text-decoration:underline;}
-      .ws-export ul,.ws-export ol{margin:0 0 10px 20px;padding:0;}
-      .ws-export li{margin:0 0 5px;}
-      .ws-export hr{border:none;border-top:1px solid #ddd;margin:12px 0;}
-    </style>
-    <div class="ws-export">${renderedMarkdown}</div>`;
-    document.body.appendChild(host);
     try {
-      if (document.fonts?.ready) {
-        await document.fonts.ready.catch(() => {
-          /* ignore */
-        });
-      }
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-      const target = host.querySelector(".ws-export") as HTMLElement | null;
-      if (!target) return;
-
-      const capture = async (foreignObjectRendering: boolean) =>
-        html2canvas(target, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          foreignObjectRendering,
-          windowWidth: target.scrollWidth,
-          windowHeight: target.scrollHeight,
-        });
-
-      let canvas = await capture(false);
-      if (canvas.width < 8 || canvas.height < 8) {
-        canvas = await capture(true);
-      }
-
-      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      const imgData = canvas.toDataURL("image/png");
-
-      let y = 0;
-      pdf.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
-      y -= pageH;
-      while (y + imgH > 0.5) {
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
-        y -= pageH;
-      }
-
-      const blob = pdf.output("blob");
+      const blob = await generateVectorPdfBlob(text, fontFamily, fontSize);
       downloadBlob(blob, "pdf");
-    } finally {
-      host.remove();
+    } catch (e) {
+      console.error(e);
+      window.alert(
+        "矢量 PDF 导出失败（多为网络无法加载嵌入字体）。请检查网络后重试，或稍后再试。",
+      );
     }
   }, [downloadBlob, fontFamily, fontSize, text]);
 
