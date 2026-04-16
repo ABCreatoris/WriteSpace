@@ -6,8 +6,15 @@
   assets/fog-bg.jpg         — 雾（由 rain 模糊/降饱和生成，可替换）
   assets/snow-wind-bg.jpg    — 风（由 snow 锐化/微调，风雪前景，可替换）
   assets/thunder-bg.jpg     — 雷（由 rain 压暗/偏紫调生成，可替换）
+  assets/sunny-bg.jpg       — 晴：当前为项目内生成的密林+野花+穿透林冠阳光束（AI 摄影风底图，已转 JPEG）；可自行替换同名文件
 
 环境音（循环）
+  assets/audio/sunny-cicadas.ogg — 晴：蝉林实录（Wikimedia「Cicadas in Greece.ogg」，约 215KB）；仓库内已抓取。若需重下或换源，可在项目根执行：
+    curl -fsSL --ipv4 --connect-timeout 30 --max-time 180 -A "Mozilla/5.0" -o public/assets/audio/sunny-cicadas.ogg "https://upload.wikimedia.org/wikipedia/commons/f/f4/Cicadas_in_Greece.ogg"
+    （若仍超时，可再加 --http1.1 或换网络；许可见 https://commons.wikimedia.org/wiki/File:Cicadas_in_Greece.ogg ）
+  assets/audio/sunny-birds.ogg — 晴：独立鸟鸣实录（优先本地；缺省时运行时尝试 Wikimedia「Bird singing.ogg」 https://commons.wikimedia.org/wiki/File:Bird_singing.ogg ）
+  （晴）无该文件时：浏览器会再尝试上述 URL；仍失败则退回程序合成蝉声
+  （晴）鸟语、微风 — Web Audio 合成
   assets/audio/rain.mp3     — 雨
   assets/audio/fog.mp3      — 雾（偏高频水滴感，由 rain 滤波生成，可替换）
   assets/audio/snow.mp3     — 雪

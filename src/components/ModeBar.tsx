@@ -4,6 +4,7 @@ import {
   CloudLightning,
   CloudRain,
   Snowflake,
+  Sun,
   Wind,
 } from "lucide-react";
 import { Fragment, useState } from "react";
@@ -14,6 +15,7 @@ const modes: {
   label: string;
   icon: typeof CloudRain;
 }[] = [
+  { id: "sunny", label: "晴", icon: Sun },
   { id: "rain", label: "雨", icon: CloudRain },
   { id: "fog", label: "雾", icon: CloudFog },
   { id: "snow", label: "雪", icon: Snowflake },

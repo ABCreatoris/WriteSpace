@@ -1,11 +1,12 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture } from "@react-three/drei";
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { ASSETS } from "../config/assets";
 import type { SceneMode } from "../lib/sceneMode";
 import { rainFragment, rainVertex } from "../shaders/rain";
 import { snowFragment, snowVertex } from "../shaders/snow";
+import { sunnyFragment, sunnyVertex } from "../shaders/sunny";
 
 export type { SceneMode } from "../lib/sceneMode";
 
@@ -130,16 +131,119 @@ function SnowPlane({
   );
 }
 
+function SunnyPlane({
+  sunnyLight,
+  backgroundUrl,
+}: {
+  sunnyLight: number;
+  backgroundUrl: string;
+}) {
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const { viewport } = useThree();
+  const loadedTexRef = useRef<THREE.Texture | null>(null);
+
+  const placeholderTex = useMemo(() => {
+    const data = new Uint8Array([100, 140, 180, 255]);
+    const t = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+    t.needsUpdate = true;
+    t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    t.generateMipmaps = false;
+    return t;
+  }, []);
+
+  const uniforms = useMemo(
+    () => ({
+      uLight: { value: sunnyLight },
+      uTexture: { value: placeholderTex },
+      uHasTexture: { value: 0 },
+      uTime: { value: 0 },
+    }),
+    [placeholderTex],
+  );
+
+  useLayoutEffect(() => {
+    const loader = new THREE.TextureLoader();
+    let cancelled = false;
+    const applyToMaterial = (tex: THREE.Texture, has: number) => {
+      const m = materialRef.current;
+      if (!m) return;
+      m.uniforms.uTexture.value = tex;
+      m.uniforms.uHasTexture.value = has;
+    };
+    loader.load(
+      backgroundUrl,
+      (tex) => {
+        if (cancelled) {
+          tex.dispose();
+          return;
+        }
+        loadedTexRef.current?.dispose();
+        loadedTexRef.current = tex;
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        tex.generateMipmaps = false;
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        applyToMaterial(tex, 1);
+      },
+      undefined,
+      () => {
+        if (cancelled) return;
+        applyToMaterial(placeholderTex, 0);
+      },
+    );
+    return () => {
+      cancelled = true;
+      loadedTexRef.current?.dispose();
+      loadedTexRef.current = null;
+      applyToMaterial(placeholderTex, 0);
+    };
+  }, [backgroundUrl, placeholderTex]);
+
+  useFrame((state) => {
+    const m = materialRef.current;
+    if (!m) return;
+    m.uniforms.uLight.value = sunnyLight;
+    m.uniforms.uTime.value = state.clock.getElapsedTime();
+  });
+
+  return (
+    <mesh scale={[viewport.width, viewport.height, 1]}>
+      <planeGeometry args={[1, 1]} />
+      <shaderMaterial
+        ref={materialRef}
+        fragmentShader={sunnyFragment}
+        vertexShader={sunnyVertex}
+        uniforms={uniforms}
+        depthWrite={false}
+        depthTest={false}
+      />
+    </mesh>
+  );
+}
+
 export function BackgroundScene({
   mode,
   rainIntensity,
   snowIntensity,
+  sunnyLight,
 }: {
   mode: SceneMode;
   rainIntensity: number;
   snowIntensity: number;
+  sunnyLight: number;
 }) {
   switch (mode) {
+    case "sunny":
+      return (
+        <SunnyPlane
+          sunnyLight={sunnyLight}
+          backgroundUrl={ASSETS.sunnyBackground}
+          key="sunny"
+        />
+      );
     case "rain":
       return (
         <RainPlane

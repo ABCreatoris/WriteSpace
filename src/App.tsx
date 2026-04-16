@@ -9,6 +9,7 @@ import {
   sceneRainFamily,
   type SceneMode,
 } from "./lib/sceneMode";
+import { SunnyWebAmbience } from "./lib/sunnyWebAmbience";
 import { EditorPanel } from "./components/EditorPanel";
 import { FontBar, type FontFamilyId, type FontSizeId } from "./components/FontBar";
 import { ModeBar } from "./components/ModeBar";
@@ -20,15 +21,25 @@ export default function App() {
   const [size, setSize] = useState<FontSizeId>("small");
   const [rainIntensity, setRainIntensity] = useState(0.8);
   const [snowIntensity, setSnowIntensity] = useState(0.7);
+  /** 晴：画面光感，0.5 为正常 */
+  const [sunnyLight, setSunnyLight] = useState(0.5);
   const [rainVol, setRainVol] = useState(0.4);
   const [snowVol, setSnowVol] = useState(0.7);
+  const [sunnyVol, setSunnyVol] = useState(0.45);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [lightningBurst, setLightningBurst] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lightningRef = useRef<HTMLAudioElement | null>(null);
   const lightningTimersRef = useRef<number[]>([]);
+  const sunnyAmbienceRef = useRef<SunnyWebAmbience | null>(null);
+  const sunnyVolRef = useRef(sunnyVol);
+  sunnyVolRef.current = sunnyVol;
 
-  const effectiveVol = sceneRainFamily(mode) ? rainVol : snowVol;
+  const effectiveVol = sceneRainFamily(mode)
+    ? rainVol
+    : mode === "sunny"
+      ? sunnyVol
+      : snowVol;
 
   useEffect(() => {
     if (audioRef.current) return;
@@ -52,8 +63,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      sunnyAmbienceRef.current?.stop();
+      sunnyAmbienceRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
+    if (mode === "sunny") {
+      a.pause();
+      a.removeAttribute("src");
+      a.load();
+      return;
+    }
     a.src = sceneAudioUrl(mode);
     if (audioEnabled) {
       void a.play().catch(() => {
@@ -65,6 +89,7 @@ export default function App() {
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
+    if (mode === "sunny") return;
     const base = effectiveVol;
     if (mode === "thunder") {
       const storm = Math.max(0.08, Math.min(1, rainIntensity));
@@ -74,7 +99,6 @@ export default function App() {
     }
   }, [effectiveVol, mode, rainIntensity]);
 
-  /** 风模式：强度略改变播放速度，更「刮」 */
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
@@ -85,6 +109,29 @@ export default function App() {
       a.playbackRate = 1;
     }
   }, [mode, snowIntensity]);
+
+  useEffect(() => {
+    if (!audioEnabled) return;
+    if (mode === "sunny") {
+      sunnyAmbienceRef.current ??= new SunnyWebAmbience();
+      void sunnyAmbienceRef.current.start(sunnyVolRef.current);
+      return;
+    }
+    sunnyAmbienceRef.current?.stop();
+    sunnyAmbienceRef.current = null;
+    const a = audioRef.current;
+    if (a?.src) {
+      void a.play().catch(() => {
+        console.info("Resume weather audio failed");
+      });
+    }
+  }, [mode, audioEnabled]);
+
+  useEffect(() => {
+    if (mode === "sunny" && audioEnabled) {
+      sunnyAmbienceRef.current?.setBioLevel(sunnyVol);
+    }
+  }, [sunnyVol, mode, audioEnabled]);
 
   /** 雷模式：先闪屏 → 延迟后近雷（光速快于声速）；雷暴滑块控音量与闪-声间距；多条采样随机，高雷暴偶发连击。 */
   useEffect(() => {
@@ -191,6 +238,11 @@ export default function App() {
 
   const tryEnableAudio = () => {
     setAudioEnabled(true);
+    if (mode === "sunny") {
+      sunnyAmbienceRef.current ??= new SunnyWebAmbience();
+      void sunnyAmbienceRef.current.start(sunnyVolRef.current);
+      return;
+    }
     const a = audioRef.current;
     if (a) void a.play().catch(console.error);
   };
@@ -201,13 +253,19 @@ export default function App() {
         <Canvas
           camera={{ position: [0, 0, 1] }}
           dpr={[1, 2]}
-          gl={{ antialias: false, powerPreference: "high-performance" }}
+          gl={{
+            antialias: false,
+            powerPreference: "high-performance",
+            alpha: false,
+          }}
         >
+          <color attach="background" args={["#030508"]} />
           <Suspense fallback={null}>
             <BackgroundScene
               mode={mode}
               rainIntensity={rainIntensity}
               snowIntensity={snowIntensity}
+              sunnyLight={sunnyLight}
             />
           </Suspense>
         </Canvas>
@@ -242,8 +300,16 @@ export default function App() {
         setRainIntensity={setRainIntensity}
         snowIntensity={snowIntensity}
         setSnowIntensity={setSnowIntensity}
+        sunnyLight={sunnyLight}
+        setSunnyLight={setSunnyLight}
         volume={effectiveVol}
-        setVolume={sceneRainFamily(mode) ? setRainVol : setSnowVol}
+        setVolume={
+          sceneRainFamily(mode)
+            ? setRainVol
+            : mode === "sunny"
+              ? setSunnyVol
+              : setSnowVol
+        }
         onToggleAudio={tryEnableAudio}
       />
 

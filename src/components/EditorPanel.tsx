@@ -134,9 +134,9 @@ const fontClass: Record<FontFamilyId, string> = {
 };
 
 const sizeClass: Record<FontSizeId, string> = {
-  small: "text-lg md:text-xl",
-  medium: "text-xl md:text-2xl",
-  large: "text-2xl md:text-3xl",
+  small: "text-base md:text-lg",
+  medium: "text-lg md:text-xl",
+  large: "text-xl md:text-2xl",
 };
 
 export function EditorPanel({

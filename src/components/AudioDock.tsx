@@ -4,6 +4,7 @@ import {
   CloudRain,
   SlidersHorizontal,
   Snowflake,
+  Sun,
   Volume2,
   Wind,
 } from "lucide-react";
@@ -19,6 +20,8 @@ export function AudioDock({
   setRainIntensity,
   snowIntensity,
   setSnowIntensity,
+  sunnyLight,
+  setSunnyLight,
   volume,
   setVolume,
   onToggleAudio,
@@ -28,13 +31,19 @@ export function AudioDock({
   setRainIntensity: (v: number) => void;
   snowIntensity: number;
   setSnowIntensity: (v: number) => void;
+  sunnyLight: number;
+  setSunnyLight: (v: number) => void;
   volume: number;
   setVolume: (v: number) => void;
   onToggleAudio?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [panelIntensity, setPanelIntensity] = useState(
-    sceneRainFamily(mode) ? rainIntensity : snowIntensity,
+    mode === "sunny"
+      ? sunnyLight
+      : sceneRainFamily(mode)
+        ? rainIntensity
+        : snowIntensity,
   );
   const [tick, setTick] = useState(COUNTDOWN_START);
   const [ringDone, setRingDone] = useState(false);
@@ -43,8 +52,14 @@ export function AudioDock({
   const skipOpenToggle = useRef(false);
 
   useEffect(() => {
-    setPanelIntensity(sceneRainFamily(mode) ? rainIntensity : snowIntensity);
-  }, [mode, rainIntensity, snowIntensity]);
+    setPanelIntensity(
+      mode === "sunny"
+        ? sunnyLight
+        : sceneRainFamily(mode)
+          ? rainIntensity
+          : snowIntensity,
+    );
+  }, [mode, rainIntensity, snowIntensity, sunnyLight]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -86,6 +101,10 @@ export function AudioDock({
   const onIntensityInput = (v: number) => {
     setPanelIntensity(v);
     setSceneIntensity(v);
+  };
+
+  const onSunnyLightInput = (v: number) => {
+    setSunnyLight(v);
   };
 
   const toggleOpen = () => {
@@ -201,17 +220,19 @@ export function AudioDock({
             <div className="flex min-w-[140px] flex-col gap-3">
               <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-white/40">
                 <div className="flex items-center gap-2">
-                  <IntensityIcon size={12} />
+                  {mode === "sunny" ? <Sun size={12} /> : <IntensityIcon size={12} />}
                   <span>
-                    {mode === "rain"
-                      ? "雨"
-                      : mode === "fog"
-                        ? "雾"
-                        : mode === "thunder"
-                          ? "雷暴"
-                          : mode === "snow"
-                            ? "雪"
-                            : "风势"}
+                    {mode === "sunny"
+                      ? "晴"
+                      : mode === "rain"
+                        ? "雨"
+                        : mode === "fog"
+                          ? "雾"
+                          : mode === "thunder"
+                            ? "雷暴"
+                            : mode === "snow"
+                              ? "雪"
+                              : "风势"}
                   </span>
                 </div>
                 <span>{Math.round(panelIntensity * 100)}%</span>
@@ -222,7 +243,11 @@ export function AudioDock({
                 max={1}
                 step={0.01}
                 value={panelIntensity}
-                onChange={(e) => onIntensityInput(parseFloat(e.target.value))}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (mode === "sunny") onSunnyLightInput(v);
+                  else onIntensityInput(v);
+                }}
                 className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-white transition-all hover:accent-white/80"
               />
             </div>
@@ -231,7 +256,7 @@ export function AudioDock({
               <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-white/40">
                 <div className="flex items-center gap-2">
                   <Volume2 size={12} />
-                  <span>Volume</span>
+                  <span>VOLUME</span>
                 </div>
                 <span>{Math.round(volume * 100)}%</span>
               </div>
