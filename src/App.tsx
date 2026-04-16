@@ -17,7 +17,7 @@ import { ASSETS } from "./config/assets";
 
 export default function App() {
   const [mode, setMode] = useState<SceneMode>("rain");
-  const [font, setFont] = useState<FontFamilyId>("handwriting");
+  const [font, setFont] = useState<FontFamilyId>("kaiti");
   const [size, setSize] = useState<FontSizeId>("small");
   const [rainIntensity, setRainIntensity] = useState(0.8);
   const [snowIntensity, setSnowIntensity] = useState(0.7);

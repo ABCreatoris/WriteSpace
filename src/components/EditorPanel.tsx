@@ -11,8 +11,11 @@ import {
   thematicBreakPlugin,
   type MDXEditorMethods,
 } from "@mdxeditor/editor";
+import { Document, HeadingLevel, Packer, Paragraph } from "docx";
 import "@mdxeditor/editor/style.css";
 import { AnimatePresence, motion } from "framer-motion";
+import { jsPDF } from "jspdf";
+import { marked } from "marked";
 import {
   useCallback,
   useEffect,
@@ -45,6 +48,64 @@ type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 /** Symmetric panel: center + size (viewport px) */
 type PanelState = { cx: number; cy: number; w: number; h: number };
+
+type MdBlock =
+  | { kind: "h"; level: 1 | 2 | 3 | 4 | 5 | 6; text: string }
+  | { kind: "ul"; text: string }
+  | { kind: "ol"; text: string }
+  | { kind: "p"; text: string };
+
+function stripInlineMarkdown(input: string): string {
+  return input
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/_([^_]+)_/g, "$1")
+    .trim();
+}
+
+function parseMarkdownBlocks(markdown: string): MdBlock[] {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const blocks: MdBlock[] = [];
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      blocks.push({ kind: "p", text: "" });
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.+)$/);
+    if (h) {
+      blocks.push({
+        kind: "h",
+        level: h[1]!.length as 1 | 2 | 3 | 4 | 5 | 6,
+        text: stripInlineMarkdown(h[2]!),
+      });
+      continue;
+    }
+    const ul = line.match(/^[-*+]\s+(.+)$/);
+    if (ul) {
+      blocks.push({ kind: "ul", text: stripInlineMarkdown(ul[1]!) });
+      continue;
+    }
+    const ol = line.match(/^\d+[.)]\s+(.+)$/);
+    if (ol) {
+      blocks.push({ kind: "ol", text: stripInlineMarkdown(ol[1]!) });
+      continue;
+    }
+    blocks.push({ kind: "p", text: stripInlineMarkdown(line) });
+  }
+  return blocks;
+}
+
+function sanitizeHtml(input: string): string {
+  return input
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "");
+}
 
 function clampPanel(p: PanelState): PanelState {
   const vw = window.innerWidth;
@@ -127,10 +188,9 @@ function readPanel(): PanelState {
 }
 
 const fontClass: Record<FontFamilyId, string> = {
-  serif: "font-serif",
-  sans: "font-sans",
-  mono: "font-mono",
-  handwriting: "font-handwriting",
+  songti: "font-songti",
+  kaiti: "font-kaiti",
+  xinwei: "font-xinwei",
 };
 
 const sizeClass: Record<FontSizeId, string> = {
@@ -158,6 +218,7 @@ export function EditorPanel({
   );
   const [, setFocused] = useState(false);
   const [releasing, setReleasing] = useState(false);
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
   const [releaseVisual, setReleaseVisual] = useState("");
   const [holdRelease, setHoldRelease] = useState(false);
   const mdxEditorRef = useRef<MDXEditorMethods>(null);
@@ -266,20 +327,127 @@ export function EditorPanel({
     document.body.style.userSelect = "none";
   };
 
-  const download = useCallback(() => {
-    if (!text.trim()) return;
-    const blob = new Blob([text], {
-      type: "text/markdown;charset=utf-8",
-    });
+  const downloadBlob = useCallback((blob: Blob, ext: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `writespace-${new Date().toISOString().slice(0, 10)}.md`;
+    a.download = `writespace-${new Date().toISOString().slice(0, 10)}.${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }, []);
+
+  const downloadTxt = useCallback(() => {
+    if (!text.trim()) return;
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    downloadBlob(blob, "txt");
+    setSaveMenuOpen(false);
+  }, [downloadBlob, text]);
+
+  const downloadPdf = useCallback(async () => {
+    if (!text.trim()) return;
+    const pdf = new jsPDF({
+      orientation: "p",
+      unit: "pt",
+      format: "a4",
+      compress: true,
+    });
+    const mount = document.createElement("div");
+    mount.style.position = "fixed";
+    mount.style.left = "-99999px";
+    mount.style.top = "0";
+    mount.style.width = "595px";
+    mount.style.padding = "40px";
+    mount.style.whiteSpace = "pre-wrap";
+    mount.style.lineHeight = "1.8";
+    mount.style.fontSize = "14px";
+    mount.style.color = "#111";
+    mount.style.background = "#fff";
+    mount.style.fontFamily =
+      '"LXGW WenKai Lite","Kaiti SC","STKaiti","KaiTi","Noto Serif SC","Songti SC",serif';
+    const renderedMarkdown = sanitizeHtml(
+      marked.parse(text, {
+        gfm: true,
+        breaks: true,
+      }) as string,
+    );
+    mount.innerHTML = `
+      <style>
+        .ws-export{color:#111;font-size:14px;line-height:1.8;}
+        .ws-export h1{font-size:30px;line-height:1.25;margin:0 0 14px;font-weight:700;}
+        .ws-export h2{font-size:24px;line-height:1.3;margin:10px 0 12px;font-weight:700;}
+        .ws-export h3{font-size:20px;line-height:1.3;margin:8px 0 10px;font-weight:700;}
+        .ws-export h4,.ws-export h5,.ws-export h6{font-size:16px;line-height:1.35;margin:6px 0 8px;font-weight:700;}
+        .ws-export p{margin:0 0 8px;}
+        .ws-export code{background:#f3f3f3;border-radius:4px;padding:1px 4px;font-family:Menlo,Monaco,monospace;font-size:12px;}
+        .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:12px;overflow:auto;}
+        .ws-export pre code{background:transparent;padding:0;border-radius:0;}
+        .ws-export blockquote{margin:8px 0;padding:4px 0 4px 12px;border-left:3px solid #cfcfcf;color:#444;}
+        .ws-export a{color:#0f4fad;text-decoration:underline;}
+        .ws-export ul,.ws-export ol{margin:0 0 10px 22px;padding:0;}
+        .ws-export li{margin:0 0 6px;}
+        .ws-export hr{border:none;border-top:1px solid #ddd;margin:12px 0;}
+      </style>
+      <div class="ws-export">${renderedMarkdown}</div>
+    `;
+    document.body.appendChild(mount);
+    await pdf.html(mount, {
+      margin: [28, 28, 28, 28],
+      autoPaging: "text",
+      html2canvas: { scale: 1.2, useCORS: true },
+    });
+    mount.remove();
+    pdf.save(`writespace-${new Date().toISOString().slice(0, 10)}.pdf`);
+    setSaveMenuOpen(false);
   }, [text]);
+
+  const downloadWord = useCallback(async () => {
+    if (!text.trim()) return;
+    const blocks = parseMarkdownBlocks(text);
+    const headingMap: Record<1 | 2 | 3 | 4 | 5 | 6, HeadingLevel> = {
+      1: HeadingLevel.HEADING_1,
+      2: HeadingLevel.HEADING_2,
+      3: HeadingLevel.HEADING_3,
+      4: HeadingLevel.HEADING_4,
+      5: HeadingLevel.HEADING_5,
+      6: HeadingLevel.HEADING_6,
+    };
+    const doc = new Document({
+      sections: [
+        {
+          children: blocks.map((b) => {
+            if (b.kind === "h") {
+              return new Paragraph({
+                heading: headingMap[b.level],
+                text: b.text || " ",
+              });
+            }
+            if (b.kind === "ul") {
+              return new Paragraph({
+                text: b.text || " ",
+                bullet: { level: 0 },
+              });
+            }
+            if (b.kind === "ol") {
+              return new Paragraph({
+                text: b.text || " ",
+              });
+            }
+            return new Paragraph({ text: b.text || " " });
+          }),
+        },
+      ],
+    });
+    const blob = await Packer.toBlob(doc);
+    downloadBlob(
+      new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }),
+      "docx",
+    );
+    setSaveMenuOpen(false);
+  }, [downloadBlob, text]);
 
   const runRelease = useCallback(() => {
     if (!text.trim() || releasing) return;
@@ -294,6 +462,23 @@ export function EditorPanel({
       setReleaseVisual("");
     }, 3500);
   }, [text, releasing]);
+
+  const startHold = () => {
+    if (!text.trim() || releasing || saveMenuOpen) return;
+    setHoldRelease(true);
+    holdTimerRef.current = setTimeout(() => {
+      setHoldRelease(false);
+      runRelease();
+    }, 1200);
+  };
+
+  const cancelHold = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    setHoldRelease(false);
+  };
 
   const onUndoWhenEmptyCapture = (e: KeyboardEvent) => {
     if (
@@ -314,23 +499,6 @@ export function EditorPanel({
   const onMarkdownChange = (v: string, _initialNormalize: boolean) => {
     if (text.trim() && !v.trim()) undoRef.current = text;
     setText(v);
-  };
-
-  const startHold = () => {
-    if (!text.trim() || releasing) return;
-    setHoldRelease(true);
-    holdTimerRef.current = setTimeout(() => {
-      setHoldRelease(false);
-      runRelease();
-    }, 1000);
-  };
-
-  const cancelHold = () => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    setHoldRelease(false);
   };
 
   const handleBar = (dir: ResizeDir, className: string) => (
@@ -464,18 +632,52 @@ export function EditorPanel({
 
         <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_100px_rgba(0,0,0,0.1)]" />
 
-        <div className="absolute bottom-6 right-10 z-20 flex items-center gap-6 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
-          <button
-            type="button"
-            onClick={download}
-            disabled={releasing || !text.trim()}
-            className={cn(
-              "font-handwriting text-sm uppercase tracking-widest transition-all duration-300",
-              "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
+        <div className="absolute bottom-6 right-6 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {saveMenuOpen ? (
+              <motion.div
+                key="save-menu"
+                className="flex items-center gap-3"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {[
+                  { key: "arrow", label: "←", onClick: () => setSaveMenuOpen(false) },
+                  { key: "back", label: "BACK", onClick: () => setSaveMenuOpen(false) },
+                  { key: "txt", label: "TXT", onClick: downloadTxt },
+                  { key: "pdf", label: "PDF", onClick: () => void downloadPdf() },
+                  { key: "word", label: "WORD", onClick: () => void downloadWord() },
+                ].map((item, idx) => (
+                  <motion.button
+                    key={item.key}
+                    type="button"
+                    onClick={item.onClick}
+                    className="font-kaiti text-sm uppercase tracking-widest text-white/35 transition-all duration-300 hover:text-white/85"
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -12 }}
+                    transition={{ duration: 0.2, delay: idx * 0.06 }}
+                  >
+                    {item.label}
+                  </motion.button>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.button
+                key="save-button"
+                type="button"
+                onClick={() => setSaveMenuOpen(true)}
+                disabled={releasing || !text.trim()}
+                className={cn(
+                  "font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
+                  "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
+                )}
+              >
+                Save
+              </motion.button>
             )}
-          >
-            Save
-          </button>
+          </AnimatePresence>
           <button
             type="button"
             onMouseDown={startHold}
@@ -483,9 +685,9 @@ export function EditorPanel({
             onMouseLeave={cancelHold}
             onTouchStart={startHold}
             onTouchEnd={cancelHold}
-            disabled={releasing || !text.trim()}
+            disabled={releasing || !text.trim() || saveMenuOpen}
             className={cn(
-              "font-handwriting text-sm uppercase tracking-widest transition-all duration-300",
+              "font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
               "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
               holdRelease && "scale-95 text-white/60",
             )}

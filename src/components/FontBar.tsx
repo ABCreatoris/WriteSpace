@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Type } from "lucide-react";
 import { useState } from "react";
 
-export type FontFamilyId = "serif" | "sans" | "mono" | "handwriting";
+export type FontFamilyId = "songti" | "kaiti" | "xinwei";
 export type FontSizeId = "small" | "medium" | "large";
 
 export function FontBar({
@@ -19,10 +19,9 @@ export function FontBar({
   const [hover, setHover] = useState(false);
 
   const fonts: { id: FontFamilyId; label: string }[] = [
-    { id: "serif", label: "Serif" },
-    { id: "sans", label: "Sans" },
-    { id: "mono", label: "Mono" },
-    { id: "handwriting", label: "Klee" },
+    { id: "songti", label: "宋体" },
+    { id: "kaiti", label: "楷书" },
+    { id: "xinwei", label: "新魏" },
   ];
 
   const sizes: { id: FontSizeId; label: string }[] = [

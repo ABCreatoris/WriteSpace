@@ -33,6 +33,18 @@
 }
 
 @layer base {
+  body {
+    font-family:
+      "LXGW WenKai Lite",
+      "Kaiti SC",
+      "STKaiti",
+      "KaiTi",
+      "Noto Serif SC",
+      "Source Han Serif SC",
+      "Songti SC",
+      serif;
+  }
+
   textarea {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
