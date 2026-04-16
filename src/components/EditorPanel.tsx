@@ -401,6 +401,7 @@ export function EditorPanel({
 
   const downloadPdf = useCallback(async () => {
     if (!text.trim()) return;
+    setSaveMenuOpen(false);
     const basePx = exportBasePx(fontSize);
     const renderedMarkdown = markdownToRenderedHtml(text);
     const host = document.createElement("div");
@@ -482,7 +483,6 @@ export function EditorPanel({
     } finally {
       host.remove();
     }
-    setSaveMenuOpen(false);
   }, [downloadBlob, fontFamily, fontSize, text]);
 
   const downloadWord = useCallback(async () => {
