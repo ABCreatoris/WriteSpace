@@ -403,40 +403,35 @@ export function EditorPanel({
     if (!text.trim()) return;
     const basePx = exportBasePx(fontSize);
     const renderedMarkdown = markdownToRenderedHtml(text);
-    const mount = document.createElement("div");
-    mount.style.position = "fixed";
-    mount.style.left = "-10000px";
-    mount.style.top = "0";
-    mount.style.width = "794px";
-    mount.style.padding = "28px 32px";
-    mount.style.background = "#fff";
-    mount.style.color = "#111";
-    mount.style.opacity = "1";
-    mount.style.pointerEvents = "none";
-    mount.style.zIndex = "2147483647";
-    mount.style.visibility = "visible";
-    mount.style.overflow = "visible";
-    mount.innerHTML = `
-      <style>
-        .ws-export{color:#111;font-size:${basePx}px;line-height:1.62;letter-spacing:0.01em;word-break:break-word;font-family:${exportFontStack(fontFamily)};padding:0;}
-        .ws-export *{font-family:inherit;}
-        .ws-export h1{font-size:${Math.round(basePx * 2.0)}px;line-height:1.22;margin:0 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
-        .ws-export h2{font-size:${Math.round(basePx * 1.65)}px;line-height:1.3;margin:10px 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
-        .ws-export h3{font-size:${Math.round(basePx * 1.4)}px;line-height:1.32;margin:8px 0 8px;font-weight:700;break-after:avoid-page;}
-        .ws-export h4,.ws-export h5,.ws-export h6{font-size:${Math.round(basePx * 1.2)}px;line-height:1.32;margin:7px 0 7px;font-weight:700;break-after:avoid-page;}
-        .ws-export p{margin:0 0 9px;}
-        .ws-export code{background:#f3f3f3;border-radius:4px;padding:1px 4px;font-family:Menlo,Monaco,monospace;font-size:12px;}
-        .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:8px 10px;overflow:auto;break-inside:avoid;}
-        .ws-export pre code{background:transparent;padding:0;border-radius:0;}
-        .ws-export blockquote{margin:8px 0;padding:4px 0 4px 10px;border-left:3px solid #cfcfcf;color:#444;break-inside:avoid;}
-        .ws-export a{color:#0f4fad;text-decoration:underline;}
-        .ws-export ul,.ws-export ol{margin:0 0 10px 20px;padding:0;}
-        .ws-export li{margin:0 0 5px;}
-        .ws-export hr{border:none;border-top:1px solid #ddd;margin:12px 0;}
-      </style>
-      <div class="ws-export">${renderedMarkdown}</div>
-    `;
-    document.body.appendChild(mount);
+    const host = document.createElement("div");
+    host.setAttribute("aria-hidden", "true");
+    host.style.position = "fixed";
+    host.style.left = "0";
+    host.style.top = "0";
+    host.style.width = "794px";
+    host.style.pointerEvents = "none";
+    host.style.opacity = "0";
+    host.style.zIndex = "-1";
+    host.style.overflow = "hidden";
+    host.innerHTML = `<style>
+      .ws-export{color:#111;font-size:${basePx}px;line-height:1.62;letter-spacing:0.01em;word-break:break-word;font-family:${exportFontStack(fontFamily)};padding:28px 32px;background:#fff;}
+      .ws-export *{font-family:inherit;}
+      .ws-export h1{font-size:${Math.round(basePx * 2.0)}px;line-height:1.22;margin:0 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
+      .ws-export h2{font-size:${Math.round(basePx * 1.65)}px;line-height:1.3;margin:10px 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
+      .ws-export h3{font-size:${Math.round(basePx * 1.4)}px;line-height:1.32;margin:8px 0 8px;font-weight:700;break-after:avoid-page;}
+      .ws-export h4,.ws-export h5,.ws-export h6{font-size:${Math.round(basePx * 1.2)}px;line-height:1.32;margin:7px 0 7px;font-weight:700;break-after:avoid-page;}
+      .ws-export p{margin:0 0 9px;}
+      .ws-export code{background:#f3f3f3;border-radius:4px;padding:1px 4px;font-family:Menlo,Monaco,monospace;font-size:12px;}
+      .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:8px 10px;overflow:auto;break-inside:avoid;}
+      .ws-export pre code{background:transparent;padding:0;border-radius:0;}
+      .ws-export blockquote{margin:8px 0;padding:4px 0 4px 10px;border-left:3px solid #cfcfcf;color:#444;break-inside:avoid;}
+      .ws-export a{color:#0f4fad;text-decoration:underline;}
+      .ws-export ul,.ws-export ol{margin:0 0 10px 20px;padding:0;}
+      .ws-export li{margin:0 0 5px;}
+      .ws-export hr{border:none;border-top:1px solid #ddd;margin:12px 0;}
+    </style>
+    <div class="ws-export">${renderedMarkdown}</div>`;
+    document.body.appendChild(host);
     try {
       if (document.fonts?.ready) {
         await document.fonts.ready.catch(() => {
@@ -446,20 +441,23 @@ export function EditorPanel({
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
+      const target = host.querySelector(".ws-export") as HTMLElement | null;
+      if (!target) return;
+
       const capture = async (foreignObjectRendering: boolean) =>
-        html2canvas(mount, {
+        html2canvas(target, {
           scale: 2,
           useCORS: true,
           backgroundColor: "#ffffff",
           logging: false,
           foreignObjectRendering,
-          windowWidth: mount.scrollWidth,
-          windowHeight: mount.scrollHeight,
+          windowWidth: target.scrollWidth,
+          windowHeight: target.scrollHeight,
         });
 
-      let canvas = await capture(true);
+      let canvas = await capture(false);
       if (canvas.width < 8 || canvas.height < 8) {
-        canvas = await capture(false);
+        canvas = await capture(true);
       }
 
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -468,23 +466,24 @@ export function EditorPanel({
 
       const imgW = pageW;
       const imgH = (canvas.height * imgW) / canvas.width;
-      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const imgData = canvas.toDataURL("image/png");
 
       let y = 0;
-      pdf.addImage(imgData, "JPEG", 0, y, imgW, imgH, undefined, "FAST");
+      pdf.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
       y -= pageH;
       while (y + imgH > 0.5) {
         pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, y, imgW, imgH, undefined, "FAST");
+        pdf.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
         y -= pageH;
       }
 
-      pdf.save(`writespace-${new Date().toISOString().slice(0, 10)}.pdf`);
+      const blob = pdf.output("blob");
+      downloadBlob(blob, "pdf");
     } finally {
-      mount.remove();
+      host.remove();
     }
     setSaveMenuOpen(false);
-  }, [fontFamily, fontSize, text]);
+  }, [downloadBlob, fontFamily, fontSize, text]);
 
   const downloadWord = useCallback(async () => {
     if (!text.trim()) return;
