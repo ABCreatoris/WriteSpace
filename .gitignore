@@ -2,3 +2,7 @@ node_modules
 dist
 .DS_Store
 *.local
+
+# Large binaries — keep locally; clone from GitHub then add files per public/fonts/FONTS.txt
+public/fonts/*.otf
+public/fonts/*.ttf

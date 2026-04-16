@@ -4,93 +4,35 @@ import { parseMarkdownBlocks } from "../lib/markdownBlocks";
 
 const PDF_FONT_KEY = "WriteSpace";
 
-/** Pinned jsDelivr refs — subset OTF / TTF from upstream repos. */
-const FONT_URLS = {
-  notoSerifRegular:
-    "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Serif/SubsetOTF/SC/NotoSerifSC-Regular.otf",
-  notoSerifBold:
-    "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Serif/SubsetOTF/SC/NotoSerifSC-Bold.otf",
-  lxgwRegular:
-    "https://cdn.jsdelivr.net/gh/lxgw/LxgwWenKai-Lite@main/fonts/TTF/LXGWWenKaiLite-Regular.ttf",
-  lxgwMedium:
-    "https://cdn.jsdelivr.net/gh/lxgw/LxgwWenKai-Lite@main/fonts/TTF/LXGWWenKaiLite-Medium.ttf",
-} as const;
-
-const VFS_NOTO = {
-  "NotoSerifSC-Regular.otf": FONT_URLS.notoSerifRegular,
-  "NotoSerifSC-Bold.otf": FONT_URLS.notoSerifBold,
-} as const;
-
-const VFS_LXGW = {
-  "LXGWWenKaiLite-Regular.ttf": FONT_URLS.lxgwRegular,
-  "LXGWWenKaiLite-Medium.ttf": FONT_URLS.lxgwMedium,
-} as const;
-
-const fontsSongOrWei = {
-  [PDF_FONT_KEY]: {
-    normal: "NotoSerifSC-Regular.otf",
-    bold: "NotoSerifSC-Bold.otf",
-    italics: "NotoSerifSC-Regular.otf",
-    bolditalics: "NotoSerifSC-Bold.otf",
-  },
-} as const;
-
-const fontsKai = {
-  [PDF_FONT_KEY]: {
-    normal: "LXGWWenKaiLite-Regular.ttf",
-    bold: "LXGWWenKaiLite-Medium.ttf",
-    italics: "LXGWWenKaiLite-Regular.ttf",
-    bolditalics: "LXGWWenKaiLite-Medium.ttf",
-  },
-} as const;
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += chunk) {
-    const sub = bytes.subarray(i, Math.min(i + chunk, bytes.length));
-    binary += String.fromCharCode.apply(null, sub as unknown as number[]);
+function buildFonts(fontFamily: FontFamilyId): Record<string, Record<string, string>> {
+  if (fontFamily === "kaiti" || fontFamily === "xinwei") {
+    return {
+      [PDF_FONT_KEY]: {
+        normal: "/fonts/LXGWWenKaiLite-Regular.ttf",
+        bold: "/fonts/LXGWWenKaiLite-Medium.ttf",
+        italics: "/fonts/LXGWWenKaiLite-Regular.ttf",
+        bolditalics: "/fonts/LXGWWenKaiLite-Medium.ttf",
+      },
+    };
   }
-  return btoa(binary);
-}
-
-const vfsTextCache = new Map<string, Promise<string>>();
-
-async function fetchToVfsEntry(url: string, vfsName: string): Promise<[string, string]> {
-  const cacheKey = `${vfsName}|${url}`;
-  let p = vfsTextCache.get(cacheKey);
-  if (!p) {
-    p = (async () => {
-      const res = await fetch(url, { mode: "cors" });
-      if (!res.ok) {
-        throw new Error(`字体加载失败 (${vfsName}): HTTP ${res.status}`);
-      }
-      const buf = await res.arrayBuffer();
-      return arrayBufferToBase64(buf);
-    })();
-    vfsTextCache.set(cacheKey, p);
+  if (fontFamily === "harmony") {
+    return {
+      [PDF_FONT_KEY]: {
+        normal: "/fonts/NotoSerifSC-Regular.otf",
+        bold: "/fonts/NotoSerifSC-Bold.otf",
+        italics: "/fonts/NotoSerifSC-Regular.otf",
+        bolditalics: "/fonts/NotoSerifSC-Bold.otf",
+      },
+    };
   }
-  const data = await p;
-  return [vfsName, data];
-}
-
-async function buildVfsAndFonts(fontFamily: FontFamilyId): Promise<{
-  vfs: Record<string, string>;
-  fonts: typeof fontsSongOrWei;
-}> {
-  if (fontFamily === "kaiti") {
-    const entries = await Promise.all([
-      fetchToVfsEntry(VFS_LXGW["LXGWWenKaiLite-Regular.ttf"], "LXGWWenKaiLite-Regular.ttf"),
-      fetchToVfsEntry(VFS_LXGW["LXGWWenKaiLite-Medium.ttf"], "LXGWWenKaiLite-Medium.ttf"),
-    ]);
-    return { vfs: Object.fromEntries(entries), fonts: fontsKai };
-  }
-  const entries = await Promise.all([
-    fetchToVfsEntry(VFS_NOTO["NotoSerifSC-Regular.otf"], "NotoSerifSC-Regular.otf"),
-    fetchToVfsEntry(VFS_NOTO["NotoSerifSC-Bold.otf"], "NotoSerifSC-Bold.otf"),
-  ]);
-  return { vfs: Object.fromEntries(entries), fonts: fontsSongOrWei };
+  return {
+    [PDF_FONT_KEY]: {
+      normal: "/fonts/NotoSerifSC-Regular.otf",
+      bold: "/fonts/NotoSerifSC-Bold.otf",
+      italics: "/fonts/NotoSerifSC-Regular.otf",
+      bolditalics: "/fonts/NotoSerifSC-Bold.otf",
+    },
+  };
 }
 
 function bodyPt(size: FontSizeId): number {
@@ -171,13 +113,10 @@ export async function generateVectorPdfBlob(
   const { createPdf } = pdfMakeMod;
 
   const blocks = parseMarkdownBlocks(markdown);
-  const { vfs, fonts } = await buildVfsAndFonts(fontFamily);
+  const fonts = buildFonts(fontFamily);
   const body = bodyPt(fontSize);
 
-  const xinweiExtras =
-    fontFamily === "xinwei"
-      ? ({ characterSpacing: 0.35 } as const)
-      : ({} as const);
+  const xinweiExtras = fontFamily === "xinwei" ? ({ characterSpacing: 0.35 } as const) : ({} as const);
 
   const docDefinition = {
     pageSize: "A4" as const,
@@ -205,7 +144,8 @@ export async function generateVectorPdfBlob(
 
   return await new Promise<Blob>((resolve, reject) => {
     try {
-      createPdf(docDefinition, undefined, fonts as object, vfs).getBlob((blob) => {
+      // Use local font URLs directly; avoids heavyweight base64 conversion per export.
+      createPdf(docDefinition, undefined, fonts).getBlob((blob) => {
         resolve(blob);
       });
     } catch (e) {

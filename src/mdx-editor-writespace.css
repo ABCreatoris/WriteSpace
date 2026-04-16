@@ -46,6 +46,48 @@
   color: rgba(255, 255, 255, 0.75);
   /* 让英文空格在中文输入场景下更接近半角中文视觉宽度 */
   word-spacing: 0.22em;
+  font-family: inherit !important;
+}
+
+/* MDXEditor 内部节点会带默认字体，这里强制正文继承外层字体切换 */
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] p,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h1,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h2,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h3,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h4,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h5,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] h6,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] blockquote,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] li,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] a,
+.writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] span[data-lexical-text="true"] {
+  font-family: inherit !important;
+}
+
+/* Bind exact font stacks by selected mode, bypassing mdxeditor defaults. */
+.writespace-mdx-editor.writespace-font-songti .mdxeditor-root-contenteditable [contenteditable="true"],
+.writespace-mdx-editor.writespace-font-songti .mdxeditor-root-contenteditable [contenteditable="true"] * {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif !important;
+}
+
+.writespace-mdx-editor.writespace-font-kaiti .mdxeditor-root-contenteditable [contenteditable="true"],
+.writespace-mdx-editor.writespace-font-kaiti .mdxeditor-root-contenteditable [contenteditable="true"] * {
+  font-family: "LXGW WenKai Lite", "Kaiti SC", "STKaiti", "KaiTi", serif !important;
+}
+
+.writespace-mdx-editor.writespace-font-xinwei .mdxeditor-root-contenteditable [contenteditable="true"],
+.writespace-mdx-editor.writespace-font-xinwei .mdxeditor-root-contenteditable [contenteditable="true"] * {
+  font-family: "STXinwei", "HanziPen SC", "DFKai-SB", "LXGW WenKai Lite", "Kaiti SC", serif !important;
+}
+
+.writespace-mdx-editor.writespace-font-fangzheng .mdxeditor-root-contenteditable [contenteditable="true"],
+.writespace-mdx-editor.writespace-font-fangzheng .mdxeditor-root-contenteditable [contenteditable="true"] * {
+  font-family: "FZShuSong-Z01S", "FZFangSong-Z02S", "FangSong", "STFangsong", "Noto Serif SC", serif !important;
+}
+
+.writespace-mdx-editor.writespace-font-harmony .mdxeditor-root-contenteditable [contenteditable="true"],
+.writespace-mdx-editor.writespace-font-harmony .mdxeditor-root-contenteditable [contenteditable="true"] * {
+  font-family: "HarmonyOS Sans SC", "HarmonyOS Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
 }
 
 .writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] > *:first-child {

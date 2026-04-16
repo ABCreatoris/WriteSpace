@@ -1,14 +1,14 @@
-Self-hosted fonts (referenced from src/index.css):
+Self-hosted fonts (not committed to git — add these files locally under public/fonts/):
 
-  noto-serif-sc-300.woff2
-  noto-serif-sc-400.woff2
-  noto-serif-sc-500.woff2
-  lxgw-wenkai-lite-400.woff2   (and optional 700 if you use bold)
+  NotoSerifSC-Regular.otf
+  NotoSerifSC-Bold.otf
+  LXGWWenKaiLite-Regular.ttf
+  LXGWWenKaiLite-Medium.ttf
 
-Get Noto Serif SC:
-  https://fonts.google.com/noto/specimen/Noto+Serif+SC → Download family → unpack WOFF2.
+Get Noto Serif SC (OTF):
+  https://fonts.google.com/noto/specimen/Noto+Serif+SC → Download → unpack OTF.
 
-Get LXGW WenKai Lite:
-  https://github.com/lxgw/LxgwWenkai-Lite/releases (or npm lxgw-wenkai-lite-webfont, copy woff2 from node_modules into public/fonts).
+Get LXGW WenKai Lite (TTF):
+  https://github.com/lxgw/LxgwWenkai-Lite/releases
 
-If a file is missing, the browser skips that @font-face and uses the Tailwind stack fallbacks.
+If a file is missing, the browser falls back to the next family in the font stack.

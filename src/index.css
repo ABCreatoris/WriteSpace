@@ -2,36 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Self-host: drop WOFF2 files into public/fonts/ (see public/fonts/FONTS.txt). */
+/* Self-hosted fonts in public/fonts (downloaded into project). */
 @font-face {
   font-family: "Noto Serif SC";
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url("/fonts/noto-serif-sc-300.woff2") format("woff2");
+  src: url("/fonts/NotoSerifSC-Regular.otf") format("opentype");
 }
 @font-face {
   font-family: "Noto Serif SC";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/noto-serif-sc-400.woff2") format("woff2");
+  src: url("/fonts/NotoSerifSC-Regular.otf") format("opentype");
 }
 @font-face {
   font-family: "Noto Serif SC";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url("/fonts/noto-serif-sc-500.woff2") format("woff2");
+  src: url("/fonts/NotoSerifSC-Bold.otf") format("opentype");
 }
 @font-face {
   font-family: "LXGW WenKai Lite";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/lxgw-wenkai-lite-400.woff2") format("woff2");
+  src: url("/fonts/LXGWWenKaiLite-Regular.ttf") format("truetype");
 }
-
+@font-face {
+  font-family: "LXGW WenKai Lite";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/LXGWWenKaiLite-Medium.ttf") format("truetype");
+}
 @layer base {
   body {
     font-family:

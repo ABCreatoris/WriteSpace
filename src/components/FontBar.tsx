@@ -2,7 +2,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Type } from "lucide-react";
 import { useState } from "react";
 
-export type FontFamilyId = "songti" | "kaiti" | "xinwei";
+export type FontFamilyId =
+  | "songti"
+  | "kaiti"
+  | "xinwei"
+  | "fangzheng"
+  | "harmony";
 export type FontSizeId = "small" | "medium" | "large";
 
 export function FontBar({
@@ -22,6 +27,8 @@ export function FontBar({
     { id: "songti", label: "宋体" },
     { id: "kaiti", label: "楷书" },
     { id: "xinwei", label: "新魏" },
+    { id: "fangzheng", label: "方正" },
+    { id: "harmony", label: "鸿蒙" },
   ];
 
   const sizes: { id: FontSizeId; label: string }[] = [

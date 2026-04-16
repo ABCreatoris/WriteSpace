@@ -73,7 +73,47 @@ function markdownToPlainText(markdown: string): string {
   return host.textContent?.replace(/\u00a0/g, " ").trim() ?? "";
 }
 
+function exportFontStack(font: FontFamilyId): string {
+  if (font === "fangzheng") {
+    return '"FZShuSong-Z01S","FZFangSong-Z02S","FangSong","STFangsong","Noto Serif SC",serif';
+  }
+  if (font === "harmony") {
+    return '"HarmonyOS Sans SC","HarmonyOS Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif';
+  }
+  if (font === "songti") {
+    return '"Noto Serif SC","Source Han Serif SC","Songti SC","STSong",serif';
+  }
+  if (font === "xinwei") {
+    return '"STXinwei","HanziPen SC","DFKai-SB","LXGW WenKai Lite","Kaiti SC",serif';
+  }
+  return '"LXGW WenKai Lite","Kaiti SC","STKaiti","KaiTi","Noto Serif SC","Songti SC",serif';
+}
+
+function exportBasePx(size: FontSizeId): number {
+  if (size === "large") return 16;
+  if (size === "medium") return 14;
+  return 13;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 function wordFontName(font: FontFamilyId): string {
+  if (font === "fangzheng") return "方正书宋";
+  if (font === "harmony") return "HarmonyOS Sans SC";
   if (font === "songti") return "宋体";
   if (font === "xinwei") return "华文新魏";
   return "楷体";
@@ -169,6 +209,8 @@ const fontClass: Record<FontFamilyId, string> = {
   songti: "font-songti",
   kaiti: "font-kaiti",
   xinwei: "font-xinwei",
+  fangzheng: "font-fangzheng",
+  harmony: "font-harmony",
 };
 
 const sizeClass: Record<FontSizeId, string> = {
@@ -197,6 +239,7 @@ export function EditorPanel({
   const [, setFocused] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [releaseVisual, setReleaseVisual] = useState("");
   const [holdRelease, setHoldRelease] = useState(false);
   const mdxEditorRef = useRef<MDXEditorMethods>(null);
@@ -325,18 +368,113 @@ export function EditorPanel({
   }, [downloadBlob, text]);
 
   const downloadPdf = useCallback(async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || exportingPdf) return;
+    setExportingPdf(true);
     setSaveMenuOpen(false);
     try {
-      const blob = await generateVectorPdfBlob(text, fontFamily, fontSize);
+      const blob = await withTimeout(
+        generateVectorPdfBlob(text, fontFamily, fontSize),
+        12000,
+        "vector-timeout",
+      );
       downloadBlob(blob, "pdf");
     } catch (e) {
-      console.error(e);
-      window.alert(
-        "矢量 PDF 导出失败（多为网络无法加载嵌入字体）。请检查网络后重试，或稍后再试。",
-      );
+      console.error("vector pdf failed, fallback to raster", e);
+      try {
+        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+          import("html2canvas"),
+          import("jspdf"),
+        ]);
+        const basePx = exportBasePx(fontSize);
+        const renderedMarkdown = markdownToRenderedHtml(text);
+        const host = document.createElement("div");
+        host.setAttribute("aria-hidden", "true");
+        host.style.position = "fixed";
+        host.style.left = "0";
+        host.style.top = "0";
+        host.style.width = "794px";
+        host.style.pointerEvents = "none";
+        host.style.opacity = "0";
+        host.style.zIndex = "-1";
+        host.style.overflow = "hidden";
+        host.innerHTML = `<style>
+          .ws-export{color:#111;font-size:${basePx}px;line-height:1.62;letter-spacing:0.01em;word-break:break-word;font-family:${exportFontStack(fontFamily)};padding:28px 32px;background:#fff;}
+          .ws-export *{font-family:inherit;}
+          .ws-export h1{font-size:${Math.round(basePx * 2.0)}px;line-height:1.22;margin:0 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
+          .ws-export h2{font-size:${Math.round(basePx * 1.65)}px;line-height:1.3;margin:10px 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
+          .ws-export h3{font-size:${Math.round(basePx * 1.4)}px;line-height:1.32;margin:8px 0 8px;font-weight:700;break-after:avoid-page;}
+          .ws-export h4,.ws-export h5,.ws-export h6{font-size:${Math.round(basePx * 1.2)}px;line-height:1.32;margin:7px 0 7px;font-weight:700;break-after:avoid-page;}
+          .ws-export p{margin:0 0 9px;}
+          .ws-export code{background:#f3f3f3;border-radius:4px;padding:1px 4px;font-family:Menlo,Monaco,monospace;font-size:12px;}
+          .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:8px 10px;overflow:auto;break-inside:avoid;}
+          .ws-export pre code{background:transparent;padding:0;border-radius:0;}
+          .ws-export blockquote{margin:8px 0;padding:4px 0 4px 10px;border-left:3px solid #cfcfcf;color:#444;break-inside:avoid;}
+          .ws-export a{color:#0f4fad;text-decoration:underline;}
+          .ws-export ul,.ws-export ol{margin:0 0 10px 20px;padding:0;}
+          .ws-export li{margin:0 0 5px;}
+          .ws-export hr{border:none;border-top:1px solid #ddd;margin:12px 0;}
+        </style>
+        <div class="ws-export">${renderedMarkdown}</div>`;
+        document.body.appendChild(host);
+        try {
+          if (document.fonts?.ready) {
+            await document.fonts.ready.catch(() => {
+              /* ignore */
+            });
+          }
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+          const target = host.querySelector(".ws-export") as HTMLElement | null;
+          if (!target) throw new Error("raster-target-missing");
+          let canvas = await html2canvas(target, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            foreignObjectRendering: false,
+            windowWidth: target.scrollWidth,
+            windowHeight: target.scrollHeight,
+          });
+          if (canvas.width < 8 || canvas.height < 8) {
+            canvas = await html2canvas(target, {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: "#ffffff",
+              logging: false,
+              foreignObjectRendering: true,
+              windowWidth: target.scrollWidth,
+              windowHeight: target.scrollHeight,
+            });
+          }
+
+          const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+          const pageW = pdf.internal.pageSize.getWidth();
+          const pageH = pdf.internal.pageSize.getHeight();
+          const imgW = pageW;
+          const imgH = (canvas.height * imgW) / canvas.width;
+          const imgData = canvas.toDataURL("image/png");
+          let y = 0;
+          pdf.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
+          y -= pageH;
+          while (y + imgH > 0.5) {
+            pdf.addPage();
+            pdf.addImage(imgData, "PNG", 0, y, imgW, imgH, undefined, "FAST");
+            y -= pageH;
+          }
+          const blob = pdf.output("blob");
+          downloadBlob(blob, "pdf");
+        } finally {
+          host.remove();
+        }
+      } catch (fallbackError) {
+        console.error("raster pdf fallback failed", fallbackError);
+        window.alert("PDF 导出失败，请稍后再试。");
+      }
+    } finally {
+      setExportingPdf(false);
     }
-  }, [downloadBlob, fontFamily, fontSize, text]);
+  }, [downloadBlob, exportingPdf, fontFamily, fontSize, text]);
 
   const downloadWord = useCallback(async () => {
     if (!text.trim()) return;
@@ -571,6 +709,7 @@ export function EditorPanel({
           className={cn(
             /* 内边距交给 MDX 内容区，与 flow-space textarea 的 p-10 md:p-16 一致 */
             "writespace-mdx-editor writespace-text-fade dark-theme flex min-h-0 flex-1 flex-col overflow-hidden p-0",
+            `writespace-font-${fontFamily}`,
           )}
           onKeyDownCapture={onUndoWhenEmptyCapture}
         >
@@ -619,13 +758,14 @@ export function EditorPanel({
                     key={item.key}
                     type="button"
                     onClick={item.onClick}
+                    disabled={item.key === "pdf" && exportingPdf}
                     className="font-kaiti text-sm uppercase tracking-widest text-white/35 transition-all duration-300 hover:text-white/85"
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -12 }}
                     transition={{ duration: 0.2, delay: idx * 0.06 }}
                   >
-                    {item.label}
+                    {item.key === "pdf" && exportingPdf ? "PDF..." : item.label}
                   </motion.button>
                 ))}
               </motion.div>
