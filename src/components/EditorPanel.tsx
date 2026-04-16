@@ -355,7 +355,7 @@ export function EditorPanel({
     });
     const mount = document.createElement("div");
     mount.style.position = "fixed";
-    mount.style.left = "-99999px";
+    mount.style.left = "0";
     mount.style.top = "0";
     mount.style.width = "595px";
     mount.style.padding = "40px";
@@ -364,6 +364,9 @@ export function EditorPanel({
     mount.style.fontSize = "14px";
     mount.style.color = "#111";
     mount.style.background = "#fff";
+    mount.style.opacity = "0";
+    mount.style.pointerEvents = "none";
+    mount.style.zIndex = "-1";
     mount.style.fontFamily =
       '"LXGW WenKai Lite","Kaiti SC","STKaiti","KaiTi","Noto Serif SC","Songti SC",serif';
     const renderedMarkdown = sanitizeHtml(
@@ -392,12 +395,15 @@ export function EditorPanel({
       <div class="ws-export">${renderedMarkdown}</div>
     `;
     document.body.appendChild(mount);
-    await pdf.html(mount, {
-      margin: [28, 28, 28, 28],
-      autoPaging: "text",
-      html2canvas: { scale: 1.2, useCORS: true },
-    });
-    mount.remove();
+    try {
+      await pdf.html(mount, {
+        margin: [28, 28, 28, 28],
+        autoPaging: "text",
+        html2canvas: { scale: 1.2, useCORS: true, backgroundColor: "#ffffff" },
+      });
+    } finally {
+      mount.remove();
+    }
     pdf.save(`writespace-${new Date().toISOString().slice(0, 10)}.pdf`);
     setSaveMenuOpen(false);
   }, [text]);
