@@ -13,8 +13,9 @@
     curl -fsSL --ipv4 --connect-timeout 30 --max-time 180 -A "Mozilla/5.0" -o public/assets/audio/sunny-cicadas.ogg "https://upload.wikimedia.org/wikipedia/commons/f/f4/Cicadas_in_Greece.ogg"
     （若仍超时，可再加 --http1.1 或换网络；许可见 https://commons.wikimedia.org/wiki/File:Cicadas_in_Greece.ogg ）
   assets/audio/sunny-birds.ogg — 晴：独立鸟鸣实录（优先本地；缺省时运行时尝试 Wikimedia「Bird singing.ogg」 https://commons.wikimedia.org/wiki/File:Bird_singing.ogg ）
+  assets/audio/sunny-forest-birds.mp3 — 晴：林景鸟鸣环境床（~60s 循环）。与 https://note.huangxing.xyz/ 页内林模式同源：jsDelivr「niaoming.mp3」https://cdn.jsdelivr.net/gh/huangxingxing22/my-web-assets@main/niaoming.mp3 ；缺文件时可 curl 至该路径。
   （晴）无该文件时：浏览器会再尝试上述 URL；仍失败则退回程序合成蝉声
-  （晴）鸟语、微风 — Web Audio 合成
+  （晴）离散鸟语、微风 — Web Audio；林式连续鸟鸣见 sunny-forest-birds.mp3
   assets/audio/rain.mp3     — 雨
   assets/audio/fog.mp3      — 雾（偏高频水滴感，由 rain 滤波生成，可替换）
   assets/audio/snow.mp3     — 雪
@@ -28,3 +29,9 @@
 旧版 mist / blizzard 若仍留在 audio 目录可手动删除，已不再引用。
 
 字体：public/fonts/ — 见 public/fonts/FONTS.txt
+
+—— 程序化背景（Three ShaderMaterial）与 Shadertoy 对齐 ——
+与各模式 GLSL 的对应关系以 src/shaders/*.ts 文件顶部注释为准；此处为速查。
+  雨 — BigWIngs「Heartfelt」https://www.shadertoy.com/view/ltffzl（常见许可 CC BY-NC-SA）
+  雪 — baldand「Just snow」https://www.shadertoy.com/user/baldand（CC BY-NC-SA；可与 ghostty-shaders/just-snow.glsl 对照）
+  晴 — 原创组合；技法参考：preetham / hosek / clear sky；云气质 stubbe「Tiny Clouds」https://www.shadertoy.com/view/lsBfDz；林隙光搜 god rays、light shaft

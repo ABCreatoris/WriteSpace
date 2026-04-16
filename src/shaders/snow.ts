@@ -1,3 +1,12 @@
+/**
+ * 雪 / 风 / 暴雪（多层视差雪花 + 底图）
+ *
+ * Shadertoy 对齐：与 Andrew Baldwin（baldand）「Just snow」同构
+ *（LAYERS / DEPTH / WIDTH / SPEED、mat3 p、循环体公式等）。
+ * 在 Shadertoy 上搜标题「Just snow」或打开作者页筛选即可对照：
+ * https://www.shadertoy.com/user/baldand
+ * 许可：CC BY-NC-SA 3.0（见原版与常见转载如 ghostty-shaders/just-snow.glsl 头注释）。
+ */
 export const snowVertex = /* glsl */ `
   varying vec2 vUv;
   void main() {
@@ -20,7 +29,7 @@ export const snowFragment = /* glsl */ `
 
   #define S(a, b, t) smoothstep(a, b, t)
 
-  // "Just snow" style layers — adapted from public-domain style demos (see flow-space-v1)
+  // "Just snow"（baldand / Shadertoy）式多层视差 — 见本文件顶部 Shadertoy 对齐说明
 
   #define LAYERS 50
   #define DEPTH .5

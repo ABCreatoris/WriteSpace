@@ -28,7 +28,10 @@ import { cn } from "../lib/cn";
 import { parseMarkdownBlocks } from "../lib/markdownBlocks";
 import { generateVectorPdfBlob } from "../pdf/vectorPdfExport";
 import "../mdx-editor-writespace.css";
+import type { SceneMode } from "../lib/sceneMode";
 import type { FontFamilyId, FontSizeId } from "./FontBar";
+import { EditorSceneDock } from "./EditorSceneDock";
+import { PomodoroWidget } from "./PomodoroWidget";
 
 const STORAGE_KEY = "writespace_content";
 const PANEL_RECT_KEY = "writespace_panel_rect";
@@ -222,9 +225,29 @@ const sizeClass: Record<FontSizeId, string> = {
 export function EditorPanel({
   fontFamily,
   fontSize,
+  mode,
+  rainIntensity,
+  setRainIntensity,
+  snowIntensity,
+  setSnowIntensity,
+  sunnyLight,
+  setSunnyLight,
+  environmentVolume,
+  setEnvironmentVolume,
+  onToggleEnvironmentAudio,
 }: {
   fontFamily: FontFamilyId;
   fontSize: FontSizeId;
+  mode: SceneMode;
+  rainIntensity: number;
+  setRainIntensity: (v: number) => void;
+  snowIntensity: number;
+  setSnowIntensity: (v: number) => void;
+  sunnyLight: number;
+  setSunnyLight: (v: number) => void;
+  environmentVolume: number;
+  setEnvironmentVolume: (v: number) => void;
+  onToggleEnvironmentAudio?: () => void;
 }) {
   const [panel, setPanel] = useState<PanelState>(readPanel);
   const [resizing, setResizing] = useState(false);
@@ -622,7 +645,7 @@ export function EditorPanel({
 
   return (
     <div
-      className="pointer-events-auto fixed z-[35]"
+      className="pointer-events-auto fixed z-[45]"
       style={{
         left,
         top,
@@ -653,7 +676,7 @@ export function EditorPanel({
 
       <div
         className={cn(
-          "group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-[inset_0_0_0_0.5px_rgba(255,255,255,0.2),0_0_0_1px_rgba(0,0,0,0.1),0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-3xl",
+          "writespace-glass-shell group relative flex h-full w-full flex-col overflow-hidden",
           resizing
             ? "transition-none"
             : "transition-[box-shadow] duration-700 ease-out",
@@ -663,7 +686,7 @@ export function EditorPanel({
           {releasing && (
             <div
               className={cn(
-                "writespace-text-fade pointer-events-none absolute inset-0 z-[1] overflow-hidden whitespace-pre-wrap break-words p-10 md:p-16",
+                "writespace-text-fade pointer-events-none absolute inset-0 z-[24] overflow-hidden whitespace-pre-wrap break-words p-10 md:p-16",
                 "font-normal leading-[2] tracking-[0.05em] text-white/75",
                 fontClass[fontFamily],
                 sizeClass[fontSize],
@@ -710,7 +733,7 @@ export function EditorPanel({
         <div
           className={cn(
             /* 内边距交给 MDX 内容区，与 flow-space textarea 的 p-10 md:p-16 一致 */
-            "writespace-mdx-editor writespace-text-fade dark-theme flex min-h-0 flex-1 flex-col overflow-hidden p-0",
+            "writespace-mdx-editor writespace-text-fade dark-theme relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden p-0",
             `writespace-font-${fontFamily}`,
           )}
           onKeyDownCapture={onUndoWhenEmptyCapture}
@@ -737,9 +760,10 @@ export function EditorPanel({
           />
         </div>
 
-        <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_100px_rgba(0,0,0,0.1)]" />
+        <div className="pointer-events-none absolute inset-0 z-[2] rounded-[28px] shadow-[inset_0_0_100px_rgba(0,0,0,0.12)]" />
 
-        <div className="absolute bottom-6 right-8 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
+        <div className="pointer-events-auto absolute bottom-6 left-8 right-8 z-[50] flex flex-wrap items-end justify-between gap-y-3 opacity-25 transition-opacity duration-500 group-hover:opacity-80">
+          <div className="flex min-w-0 flex-wrap items-end gap-3 sm:gap-4">
           {charCount > 0 ? (
             <span
               className="pointer-events-none select-none font-kaiti text-sm tabular-nums tracking-widest text-white/30"
@@ -807,7 +831,7 @@ export function EditorPanel({
                 onTouchEnd={cancelHold}
                 disabled={releasing || !text.trim()}
                 className={cn(
-                  "font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
+                  "pointer-events-auto font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
                   "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
                   holdRelease && "scale-95 text-white/60",
                 )}
@@ -820,6 +844,28 @@ export function EditorPanel({
               </motion.button>
             )}
           </AnimatePresence>
+          </div>
+          <div className="flex shrink-0 items-center gap-3 sm:gap-5">
+          <PomodoroWidget disabled={releasing} />
+          <EditorSceneDock
+            disabled={releasing}
+            exportDisabled={!text.trim()}
+            mode={mode}
+            rainIntensity={rainIntensity}
+            setRainIntensity={setRainIntensity}
+            snowIntensity={snowIntensity}
+            setSnowIntensity={setSnowIntensity}
+            sunnyLight={sunnyLight}
+            setSunnyLight={setSunnyLight}
+            environmentVolume={environmentVolume}
+            setEnvironmentVolume={setEnvironmentVolume}
+            onToggleAudio={onToggleEnvironmentAudio}
+            exportingPdf={exportingPdf}
+            onExportTxt={downloadTxt}
+            onExportPdf={() => void downloadPdf()}
+            onExportWord={() => void downloadWord()}
+          />
+          </div>
         </div>
       </div>
     </div>

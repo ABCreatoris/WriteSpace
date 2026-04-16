@@ -1,3 +1,11 @@
+/**
+ * 雨 / 雾 / 雷（玻璃雨滴折射底图）
+ *
+ * Shadertoy 对齐：雨滴分层、N13、StaticDrops、DropLayer 等与
+ * Martijn Steinrucken（BigWIngs）「Heartfelt」一致，便于对照原版参数与行为。
+ * https://www.shadertoy.com/view/ltffzl
+ * 原版许可多为 CC BY-NC-SA；本文件为 Three.js 适配与业务 uniform，分发前请自行确认合规。
+ */
 export const rainVertex = /* glsl */ `
   varying vec2 vUv;
   void main() {

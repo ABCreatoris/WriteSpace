@@ -44,7 +44,7 @@ export function FontBar({
       onMouseLeave={() => setHover(false)}
     >
       <div className="flex flex-col items-start gap-2">
-        <div className="cursor-pointer rounded-full border border-white/10 bg-white/5 p-3 text-white/40 transition-colors hover:text-white">
+        <div className="cursor-pointer rounded-full border border-white/20 bg-black/35 p-3 text-white/45 shadow-[0_8px_24px_rgba(0,0,0,0.25)] backdrop-blur-xl backdrop-saturate-150 transition-colors hover:text-white">
           <Type size={18} strokeWidth={2} />
         </div>
         <AnimatePresence>
@@ -53,7 +53,7 @@ export function FontBar({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex min-w-[100px] flex-col gap-4 rounded-2xl border border-white/10 bg-white/5 p-3 shadow-xl backdrop-blur-md"
+              className="flex min-w-[100px] flex-col gap-4 rounded-2xl border border-white/20 bg-black/35 p-3 shadow-[0_10px_32px_rgba(0,0,0,0.3)] backdrop-blur-2xl backdrop-saturate-150"
             >
               <div className="flex flex-col gap-1">
                 <div className="px-2 pb-1 font-sans text-[10px] uppercase tracking-widest text-white/20">

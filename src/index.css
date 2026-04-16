@@ -59,6 +59,47 @@
   }
 }
 
+@layer components {
+  /**
+   * 毛玻璃卡片：暗底 + blur + 渐变高光描边（参考 note.huangxing.xyz .glass-editor）
+   */
+  .writespace-glass-shell {
+    position: relative;
+    isolation: isolate;
+    border-radius: 28px;
+    background: rgba(0, 0, 0, 0.25);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  }
+
+  .writespace-glass-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: 28px;
+    padding: 1px;
+    background: linear-gradient(
+      to bottom right,
+      rgba(255, 255, 255, 0.48),
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.32)
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
 @layer utilities {
   /* Text only: 1rem bands at top/bottom; alpha eases in over 1rem (edge reads like more “blur”) */
   .writespace-text-fade {

@@ -27,6 +27,11 @@ export const ASSETS = {
   sunnyCicadas: publicUrl("assets/audio/sunny-cicadas.ogg"),
   /** 晴：鸟鸣实录（ogg）；可放本地，否则运行时尝试从 Wikimedia 拉取。 */
   sunnyBirds: publicUrl("assets/audio/sunny-birds.ogg"),
+  /**
+   * 晴：林景鸟鸣环境床（循环 mp3）。与 https://note.huangxing.xyz/ 林模式同源素材
+   * `niaoming.mp3`（huangxingxing22/my-web-assets）；缺省时见 sunnyWebAmbience 内远程回退 URL。
+   */
+  sunnyForestBirdsBed: publicUrl("assets/audio/sunny-forest-birds.mp3"),
   /** 近雷击（随机其一）：Mixkit 多条 thunder + 低通/短混响（Mixkit License）。 */
   lightningStrikes: [
     publicUrl("assets/audio/lightning1.mp3"),

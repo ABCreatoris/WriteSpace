@@ -2,6 +2,9 @@ import { ASSETS } from "../config/assets";
 
 const CICADAS_REMOTE_OGG =
   "https://upload.wikimedia.org/wikipedia/commons/f/f4/Cicadas_in_Greece.ogg";
+/** 与 note.huangxing.xyz 林模式页引用的 jsDelivr 素材一致（niaoming.mp3）。 */
+const FOREST_BIRDS_BED_REMOTE_MP3 =
+  "https://cdn.jsdelivr.net/gh/huangxingxing22/my-web-assets@main/niaoming.mp3";
 const BIRDS_REMOTE_OGGS = [
   "https://upload.wikimedia.org/wikipedia/commons/4/42/Bird_singing.ogg",
   "https://upload.wikimedia.org/wikipedia/commons/2/29/Common_Blackbird_%28Turdus_merula%29_%28W1CDR0001425_BD22%29.ogg",
@@ -11,7 +14,7 @@ const BIRDS_REMOTE_OGGS = [
 /**
  * 晴日环境音：
  * - Wind：稳定微风底床（不随右侧滑块剧烈变化）
- * - Bio：蝉鸣与鸟鸣（由右侧滑块增强）
+ * - Bio：蝉鸣、离散鸟鸣采样，以及「林」式循环鸟鸣底床（由右侧滑块增强）
  */
 export class SunnyWebAmbience {
   private ctx: AudioContext | null = null;
@@ -19,6 +22,7 @@ export class SunnyWebAmbience {
   private windBus: GainNode | null = null;
   private cicadaBus: GainNode | null = null;
   private birdBus: GainNode | null = null;
+  private forestBirdBedGain: GainNode | null = null;
   private cicadaPulseTimer: ReturnType<typeof setTimeout> | null = null;
   private birdTimer: ReturnType<typeof setTimeout> | null = null;
   private cicadaOn = true;
@@ -64,12 +68,55 @@ export class SunnyWebAmbience {
 
     this.running = true;
     this.addWindBed(ctx, this.windBus);
+    await this.addForestBirdBed(ctx, this.master);
     await this.addCicadas(ctx, this.cicadaBus);
     this.birdBuffers = await this.tryDecodeBirdLoops(ctx);
+    this.setBioLevel(bioLevel);
     await ctx.resume();
     this.cicadaOn = true;
     this.playBirdVariant();
     this.scheduleBird();
+  }
+
+  /** 林景式连续鸟鸣底床（~60s 循环），与 note.huangxing.xyz 同源 niaoming.mp3。 */
+  private async addForestBirdBed(ctx: AudioContext, dest: AudioNode) {
+    const buf = await this.tryDecodeForestBirdBed(ctx);
+    if (!buf) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 380;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 12000;
+    lp.Q.value = 0.35;
+    this.forestBirdBedGain = ctx.createGain();
+    this.forestBirdBedGain.gain.value = 0;
+    src.connect(hp);
+    hp.connect(lp);
+    lp.connect(this.forestBirdBedGain);
+    this.forestBirdBedGain.connect(dest);
+    src.start();
+  }
+
+  private async tryDecodeForestBirdBed(
+    ctx: AudioContext,
+  ): Promise<AudioBuffer | null> {
+    const urls = [ASSETS.sunnyForestBirdsBed, FOREST_BIRDS_BED_REMOTE_MP3];
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { mode: "cors", cache: "force-cache" });
+        if (!res.ok) continue;
+        const ab = await res.arrayBuffer();
+        if (ab.byteLength < 256) continue;
+        return await ctx.decodeAudioData(ab);
+      } catch {
+        /* try next */
+      }
+    }
+    return null;
   }
 
   private addWindBed(ctx: AudioContext, dest: AudioNode) {
@@ -259,13 +306,16 @@ export class SunnyWebAmbience {
   setBioLevel(v: number) {
     const cg = this.cicadaBus?.gain;
     const bg = this.birdBus?.gain;
-    if ((!cg && !bg) || !this.ctx) return;
+    const fg = this.forestBirdBedGain?.gain;
+    if ((!cg && !bg && !fg) || !this.ctx) return;
     // 正常位（0.5）附近温和，放大后增强更明显
     const x = Math.max(0, Math.min(1, v));
     const cicadaScaled = 0.08 + x * 0.72;
     const birdScaled = 0.22 + x * 1.05;
+    const forestScaled = 0.05 + x * 0.38;
     if (cg) cg.setTargetAtTime(cicadaScaled, this.ctx.currentTime, 0.06);
     if (bg) bg.setTargetAtTime(birdScaled, this.ctx.currentTime, 0.06);
+    if (fg) fg.setTargetAtTime(forestScaled, this.ctx.currentTime, 0.08);
   }
 
   stop() {
@@ -287,6 +337,7 @@ export class SunnyWebAmbience {
     this.windBus = null;
     this.cicadaBus = null;
     this.birdBus = null;
+    this.forestBirdBedGain = null;
     this.birdBuffers = [];
   }
 }

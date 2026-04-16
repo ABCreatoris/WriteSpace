@@ -1,4 +1,12 @@
-/** 晴：底图 + uLight 曝光；前景野花层；无底图时程序化蓝天 */
+/**
+ * 晴：底图 + uLight 曝光；前景野花；无底图时程序化蓝天 + 太阳 + 简易 god rays。
+ *
+ * Shadertoy 对齐（技法/气质参考，非逐行移植）：
+ * - 晴空梯度 + 太阳盘：可对照各类 Preetham/Hosek 晴空与「clear sky」条目；
+ * - 体积云极简：stubbe「Tiny Clouds」https://www.shadertoy.com/view/lsBfDz
+ * - 林隙光 / god rays：Shadertoy 搜「god rays」「light shaft」「volumetric」作视觉参考。
+ * 底图为项目 JPEG；GLSL 野花与 ray 条纹为本仓库原创组合。
+ */
 export const sunnyVertex = /* glsl */ `
   varying vec2 vUv;
   void main() {

@@ -1,7 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { AnimatePresence, motion } from "framer-motion";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { AudioDock } from "./components/AudioDock";
 import { BackgroundScene } from "./components/BackgroundScene";
 import {
   sceneAudioUrl,
@@ -292,9 +291,9 @@ export default function App() {
         currentSize={size}
         onSizeChange={setSize}
       />
-      <EditorPanel fontFamily={font} fontSize={size} />
-
-      <AudioDock
+      <EditorPanel
+        fontFamily={font}
+        fontSize={size}
         mode={mode}
         rainIntensity={rainIntensity}
         setRainIntensity={setRainIntensity}
@@ -302,15 +301,15 @@ export default function App() {
         setSnowIntensity={setSnowIntensity}
         sunnyLight={sunnyLight}
         setSunnyLight={setSunnyLight}
-        volume={effectiveVol}
-        setVolume={
+        environmentVolume={effectiveVol}
+        setEnvironmentVolume={
           sceneRainFamily(mode)
             ? setRainVol
             : mode === "sunny"
               ? setSunnyVol
               : setSnowVol
         }
-        onToggleAudio={tryEnableAudio}
+        onToggleEnvironmentAudio={tryEnableAudio}
       />
 
       <div className="pointer-events-none fixed bottom-8 right-8 z-30 select-none text-white/30">

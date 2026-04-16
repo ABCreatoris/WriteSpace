@@ -44,7 +44,7 @@ export function ModeBar({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex max-w-[min(100vw-2rem,40rem)] flex-wrap items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-3 shadow-xl backdrop-blur-md sm:gap-1 sm:px-6"
+            className="flex max-w-[min(100vw-2rem,40rem)] flex-wrap items-center justify-center gap-2 rounded-full border border-white/20 bg-black/35 px-4 py-3 shadow-[0_10px_32px_rgba(0,0,0,0.3)] backdrop-blur-2xl backdrop-saturate-150 sm:gap-1 sm:px-6"
           >
             {modes.map((m, i) => {
               const Icon = m.icon;
