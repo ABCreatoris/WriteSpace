@@ -638,7 +638,7 @@ export function EditorPanel({
 
         <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_100px_rgba(0,0,0,0.1)]" />
 
-        <div className="absolute bottom-6 right-6 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
+        <div className="absolute bottom-6 right-2 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
           <AnimatePresence mode="popLayout" initial={false}>
             {saveMenuOpen ? (
               <motion.div
