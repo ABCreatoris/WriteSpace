@@ -268,6 +268,8 @@ export function EditorPanel({
   const undoRef = useRef("");
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const charCount = useMemo(() => markdownToPlainText(text).length, [text]);
+
   const left = panel.cx - panel.w / 2;
   const top = panel.cy - panel.h / 2;
 
@@ -738,6 +740,15 @@ export function EditorPanel({
         <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_100px_rgba(0,0,0,0.1)]" />
 
         <div className="absolute bottom-6 right-8 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
+          {charCount > 0 ? (
+            <span
+              className="pointer-events-none select-none font-kaiti text-sm tabular-nums tracking-widest text-white/30"
+              aria-live="polite"
+              title="按正文（Markdown 渲染为纯文本）统计的字符数"
+            >
+              {charCount.toLocaleString()} 字
+            </span>
+          ) : null}
           <AnimatePresence mode="popLayout" initial={false}>
             {saveMenuOpen ? (
               <motion.div
