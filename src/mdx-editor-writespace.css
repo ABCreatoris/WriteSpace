@@ -44,6 +44,8 @@
 /* 与 flow-space textarea 的 text-white/75 一致 */
 .writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] {
   color: rgba(255, 255, 255, 0.75);
+  /* 让英文空格在中文输入场景下更接近半角中文视觉宽度 */
+  word-spacing: 0.22em;
 }
 
 .writespace-mdx-editor .mdxeditor-root-contenteditable [contenteditable="true"] > *:first-child {

@@ -11,9 +11,10 @@ import {
   thematicBreakPlugin,
   type MDXEditorMethods,
 } from "@mdxeditor/editor";
-import { Document, HeadingLevel, Packer, Paragraph } from "docx";
+import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import "@mdxeditor/editor/style.css";
 import { AnimatePresence, motion } from "framer-motion";
+import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { marked } from "marked";
 import {
@@ -55,8 +56,15 @@ type MdBlock =
   | { kind: "ol"; text: string }
   | { kind: "p"; text: string };
 
+function decodeHtmlEntities(input: string): string {
+  const el = document.createElement("textarea");
+  el.innerHTML = input;
+  return el.value;
+}
+
 function stripInlineMarkdown(input: string): string {
-  return input
+  return decodeHtmlEntities(
+    input
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
@@ -64,7 +72,8 @@ function stripInlineMarkdown(input: string): string {
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/__([^_]+)__/g, "$1")
     .replace(/_([^_]+)_/g, "$1")
-    .trim();
+    .trim(),
+  );
 }
 
 function parseMarkdownBlocks(markdown: string): MdBlock[] {
@@ -105,6 +114,50 @@ function sanitizeHtml(input: string): string {
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
     .replace(/\son\w+="[^"]*"/gi, "")
     .replace(/\son\w+='[^']*'/gi, "");
+}
+
+function markdownToRenderedHtml(markdown: string): string {
+  return sanitizeHtml(
+    marked.parse(markdown, {
+      gfm: true,
+      breaks: true,
+    }) as string,
+  );
+}
+
+function markdownToPlainText(markdown: string): string {
+  const host = document.createElement("div");
+  host.style.whiteSpace = "pre-wrap";
+  host.innerHTML = markdownToRenderedHtml(markdown);
+  return host.textContent?.replace(/\u00a0/g, " ").trim() ?? "";
+}
+
+function exportFontStack(font: FontFamilyId): string {
+  if (font === "songti") {
+    return '"Noto Serif SC","Source Han Serif SC","Songti SC","STSong",serif';
+  }
+  if (font === "xinwei") {
+    return '"STXinwei","HanziPen SC","DFKai-SB","LXGW WenKai Lite","Kaiti SC",serif';
+  }
+  return '"LXGW WenKai Lite","Kaiti SC","STKaiti","KaiTi","Noto Serif SC","Songti SC",serif';
+}
+
+function wordFontName(font: FontFamilyId): string {
+  if (font === "songti") return "宋体";
+  if (font === "xinwei") return "华文新魏";
+  return "楷体";
+}
+
+function exportBasePx(size: FontSizeId): number {
+  if (size === "large") return 16;
+  if (size === "medium") return 14;
+  return 13;
+}
+
+function wordBodyHalfPt(size: FontSizeId): number {
+  if (size === "large") return 30; // 15pt
+  if (size === "medium") return 26; // 13pt
+  return 24; // 12pt
 }
 
 function clampPanel(p: PanelState): PanelState {
@@ -340,73 +393,91 @@ export function EditorPanel({
 
   const downloadTxt = useCallback(() => {
     if (!text.trim()) return;
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const plain = markdownToPlainText(text);
+    const blob = new Blob([plain], { type: "text/plain;charset=utf-8" });
     downloadBlob(blob, "txt");
     setSaveMenuOpen(false);
   }, [downloadBlob, text]);
 
   const downloadPdf = useCallback(async () => {
     if (!text.trim()) return;
-    const pdf = new jsPDF({
-      orientation: "p",
-      unit: "pt",
-      format: "a4",
-      compress: true,
-    });
+    const basePx = exportBasePx(fontSize);
+    const renderedMarkdown = markdownToRenderedHtml(text);
     const mount = document.createElement("div");
     mount.style.position = "fixed";
     mount.style.left = "0";
     mount.style.top = "0";
-    mount.style.width = "595px";
-    mount.style.padding = "40px";
-    mount.style.whiteSpace = "pre-wrap";
-    mount.style.lineHeight = "1.8";
-    mount.style.fontSize = "14px";
-    mount.style.color = "#111";
+    mount.style.width = "794px";
+    mount.style.padding = "28px 32px";
     mount.style.background = "#fff";
+    mount.style.color = "#111";
     mount.style.opacity = "0";
     mount.style.pointerEvents = "none";
-    mount.style.zIndex = "-1";
-    mount.style.fontFamily =
-      '"LXGW WenKai Lite","Kaiti SC","STKaiti","KaiTi","Noto Serif SC","Songti SC",serif';
-    const renderedMarkdown = sanitizeHtml(
-      marked.parse(text, {
-        gfm: true,
-        breaks: true,
-      }) as string,
-    );
+    mount.style.zIndex = "2147483647";
+    mount.style.visibility = "hidden";
+    mount.style.overflow = "visible";
     mount.innerHTML = `
       <style>
-        .ws-export{color:#111;font-size:14px;line-height:1.8;}
-        .ws-export h1{font-size:30px;line-height:1.25;margin:0 0 14px;font-weight:700;}
-        .ws-export h2{font-size:24px;line-height:1.3;margin:10px 0 12px;font-weight:700;}
-        .ws-export h3{font-size:20px;line-height:1.3;margin:8px 0 10px;font-weight:700;}
-        .ws-export h4,.ws-export h5,.ws-export h6{font-size:16px;line-height:1.35;margin:6px 0 8px;font-weight:700;}
-        .ws-export p{margin:0 0 8px;}
+        .ws-export{color:#111;font-size:${basePx}px;line-height:1.62;letter-spacing:0.01em;word-break:break-word;font-family:${exportFontStack(fontFamily)};padding:0;}
+        .ws-export *{font-family:inherit;}
+        .ws-export h1{font-size:${Math.round(basePx * 2.0)}px;line-height:1.22;margin:0 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
+        .ws-export h2{font-size:${Math.round(basePx * 1.65)}px;line-height:1.3;margin:10px 0 10px;font-weight:700;letter-spacing:0.02em;break-after:avoid-page;}
+        .ws-export h3{font-size:${Math.round(basePx * 1.4)}px;line-height:1.32;margin:8px 0 8px;font-weight:700;break-after:avoid-page;}
+        .ws-export h4,.ws-export h5,.ws-export h6{font-size:${Math.round(basePx * 1.2)}px;line-height:1.32;margin:7px 0 7px;font-weight:700;break-after:avoid-page;}
+        .ws-export p{margin:0 0 9px;}
         .ws-export code{background:#f3f3f3;border-radius:4px;padding:1px 4px;font-family:Menlo,Monaco,monospace;font-size:12px;}
-        .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:12px;overflow:auto;}
+        .ws-export pre{background:#f8f8f8;border:1px solid #ececec;border-radius:8px;padding:8px 10px;overflow:auto;break-inside:avoid;}
         .ws-export pre code{background:transparent;padding:0;border-radius:0;}
-        .ws-export blockquote{margin:8px 0;padding:4px 0 4px 12px;border-left:3px solid #cfcfcf;color:#444;}
+        .ws-export blockquote{margin:8px 0;padding:4px 0 4px 10px;border-left:3px solid #cfcfcf;color:#444;break-inside:avoid;}
         .ws-export a{color:#0f4fad;text-decoration:underline;}
-        .ws-export ul,.ws-export ol{margin:0 0 10px 22px;padding:0;}
-        .ws-export li{margin:0 0 6px;}
+        .ws-export ul,.ws-export ol{margin:0 0 10px 20px;padding:0;}
+        .ws-export li{margin:0 0 5px;}
         .ws-export hr{border:none;border-top:1px solid #ddd;margin:12px 0;}
       </style>
       <div class="ws-export">${renderedMarkdown}</div>
     `;
     document.body.appendChild(mount);
     try {
-      await pdf.html(mount, {
-        margin: [28, 28, 28, 28],
-        autoPaging: "text",
-        html2canvas: { scale: 1.2, useCORS: true, backgroundColor: "#ffffff" },
+      if (document.fonts?.ready) {
+        await document.fonts.ready.catch(() => {
+          /* ignore */
+        });
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const canvas = await html2canvas(mount, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: mount.scrollWidth,
+        windowHeight: mount.scrollHeight,
       });
+
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+      let y = 0;
+      pdf.addImage(imgData, "JPEG", 0, y, imgW, imgH, undefined, "FAST");
+      y -= pageH;
+      while (y + imgH > 0.5) {
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, y, imgW, imgH, undefined, "FAST");
+        y -= pageH;
+      }
+
+      pdf.save(`writespace-${new Date().toISOString().slice(0, 10)}.pdf`);
     } finally {
       mount.remove();
     }
-    pdf.save(`writespace-${new Date().toISOString().slice(0, 10)}.pdf`);
     setSaveMenuOpen(false);
-  }, [text]);
+  }, [fontFamily, fontSize, text]);
 
   const downloadWord = useCallback(async () => {
     if (!text.trim()) return;
@@ -419,6 +490,30 @@ export function EditorPanel({
       5: HeadingLevel.HEADING_5,
       6: HeadingLevel.HEADING_6,
     };
+    const font = wordFontName(fontFamily);
+    const bodySize = wordBodyHalfPt(fontSize);
+    const headingSize = (level: 1 | 2 | 3 | 4 | 5 | 6): number => {
+      if (level === 1) return Math.round(bodySize * 1.85);
+      if (level === 2) return Math.round(bodySize * 1.6);
+      if (level === 3) return Math.round(bodySize * 1.35);
+      if (level === 4) return Math.round(bodySize * 1.2);
+      if (level === 5) return Math.round(bodySize * 1.1);
+      return Math.round(bodySize * 1.05);
+    };
+
+    const run = (value: string, sizeHalfPt = bodySize, bold = false) =>
+      new TextRun({
+        text: value || " ",
+        font: {
+          name: font,
+          eastAsia: font,
+          ascii: font,
+          hAnsi: font,
+        },
+        size: sizeHalfPt,
+        bold,
+      });
+
     const doc = new Document({
       sections: [
         {
@@ -426,21 +521,27 @@ export function EditorPanel({
             if (b.kind === "h") {
               return new Paragraph({
                 heading: headingMap[b.level],
-                text: b.text || " ",
+                children: [run(b.text, headingSize(b.level), true)],
+                spacing: { after: 150, line: 380 },
               });
             }
             if (b.kind === "ul") {
               return new Paragraph({
-                text: b.text || " ",
+                children: [run(b.text, bodySize)],
                 bullet: { level: 0 },
+                spacing: { after: 90, line: 340 },
               });
             }
             if (b.kind === "ol") {
               return new Paragraph({
-                text: b.text || " ",
+                children: [run(b.text, bodySize)],
+                spacing: { after: 90, line: 340 },
               });
             }
-            return new Paragraph({ text: b.text || " " });
+            return new Paragraph({
+              children: [run(b.text, bodySize)],
+              spacing: { after: 100, line: 340 },
+            });
           }),
         },
       ],
@@ -453,7 +554,7 @@ export function EditorPanel({
       "docx",
     );
     setSaveMenuOpen(false);
-  }, [downloadBlob, text]);
+  }, [downloadBlob, fontFamily, fontSize, text]);
 
   const runRelease = useCallback(() => {
     if (!text.trim() || releasing) return;
@@ -638,12 +739,12 @@ export function EditorPanel({
 
         <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_100px_rgba(0,0,0,0.1)]" />
 
-        <div className="absolute bottom-6 right-2 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
+        <div className="absolute bottom-6 right-8 z-20 flex items-center gap-4 opacity-10 transition-opacity duration-500 group-hover:opacity-50">
           <AnimatePresence mode="popLayout" initial={false}>
             {saveMenuOpen ? (
               <motion.div
                 key="save-menu"
-                className="flex items-center gap-3"
+                className="flex translate-x-5 items-center gap-3"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -684,22 +785,31 @@ export function EditorPanel({
               </motion.button>
             )}
           </AnimatePresence>
-          <button
-            type="button"
-            onMouseDown={startHold}
-            onMouseUp={cancelHold}
-            onMouseLeave={cancelHold}
-            onTouchStart={startHold}
-            onTouchEnd={cancelHold}
-            disabled={releasing || !text.trim() || saveMenuOpen}
-            className={cn(
-              "font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
-              "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
-              holdRelease && "scale-95 text-white/60",
+          <AnimatePresence initial={false}>
+            {!saveMenuOpen && (
+              <motion.button
+                key="release-button"
+                type="button"
+                onMouseDown={startHold}
+                onMouseUp={cancelHold}
+                onMouseLeave={cancelHold}
+                onTouchStart={startHold}
+                onTouchEnd={cancelHold}
+                disabled={releasing || !text.trim()}
+                className={cn(
+                  "font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
+                  "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
+                  holdRelease && "scale-95 text-white/60",
+                )}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.18 }}
+              >
+                Release
+              </motion.button>
             )}
-          >
-            Release
-          </button>
+          </AnimatePresence>
         </div>
       </div>
     </div>
