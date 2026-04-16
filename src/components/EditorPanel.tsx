@@ -405,16 +405,16 @@ export function EditorPanel({
     const renderedMarkdown = markdownToRenderedHtml(text);
     const mount = document.createElement("div");
     mount.style.position = "fixed";
-    mount.style.left = "0";
+    mount.style.left = "-10000px";
     mount.style.top = "0";
     mount.style.width = "794px";
     mount.style.padding = "28px 32px";
     mount.style.background = "#fff";
     mount.style.color = "#111";
-    mount.style.opacity = "0";
+    mount.style.opacity = "1";
     mount.style.pointerEvents = "none";
     mount.style.zIndex = "2147483647";
-    mount.style.visibility = "hidden";
+    mount.style.visibility = "visible";
     mount.style.overflow = "visible";
     mount.innerHTML = `
       <style>
@@ -446,14 +446,21 @@ export function EditorPanel({
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-      const canvas = await html2canvas(mount, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        windowWidth: mount.scrollWidth,
-        windowHeight: mount.scrollHeight,
-      });
+      const capture = async (foreignObjectRendering: boolean) =>
+        html2canvas(mount, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          foreignObjectRendering,
+          windowWidth: mount.scrollWidth,
+          windowHeight: mount.scrollHeight,
+        });
+
+      let canvas = await capture(true);
+      if (canvas.width < 8 || canvas.height < 8) {
+        canvas = await capture(false);
+      }
 
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
       const pageW = pdf.internal.pageSize.getWidth();
