@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { AnimatePresence, motion } from "framer-motion";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { BackgroundScene } from "./components/BackgroundScene";
 import {
   sceneAudioUrl,
@@ -10,11 +10,16 @@ import {
 } from "./lib/sceneMode";
 import { SunnyWebAmbience } from "./lib/sunnyWebAmbience";
 import { EditorPanel } from "./components/EditorPanel";
-import { FontBar, type FontFamilyId, type FontSizeId } from "./components/FontBar";
+import type { FontFamilyId, FontSizeId } from "./components/FontBar";
 import { ModeBar } from "./components/ModeBar";
 import { ASSETS } from "./config/assets";
 
 export default function App() {
+  const sceneTopMenuLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const [sceneTopMenuFromDockHover, setSceneTopMenuFromDockHover] =
+    useState(false);
   const [mode, setMode] = useState<SceneMode>("rain");
   const [font, setFont] = useState<FontFamilyId>("kaiti");
   const [size, setSize] = useState<FontSizeId>("small");
@@ -235,6 +240,39 @@ export default function App() {
     };
   }, [mode, audioEnabled, effectiveVol, rainIntensity]);
 
+  const clearSceneTopMenuLeaveTimer = useCallback(() => {
+    if (sceneTopMenuLeaveTimer.current != null) {
+      window.clearTimeout(sceneTopMenuLeaveTimer.current);
+      sceneTopMenuLeaveTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearSceneTopMenuLeaveTimer(), [clearSceneTopMenuLeaveTimer]);
+
+  const onSceneCycleTopMenuHover = useCallback(
+    (active: boolean) => {
+      clearSceneTopMenuLeaveTimer();
+      if (active) setSceneTopMenuFromDockHover(true);
+      else {
+        sceneTopMenuLeaveTimer.current = window.setTimeout(() => {
+          setSceneTopMenuFromDockHover(false);
+          sceneTopMenuLeaveTimer.current = null;
+        }, 240);
+      }
+    },
+    [clearSceneTopMenuLeaveTimer],
+  );
+
+  const onTopChromePointerEnter = useCallback(() => {
+    clearSceneTopMenuLeaveTimer();
+    setSceneTopMenuFromDockHover(true);
+  }, [clearSceneTopMenuLeaveTimer]);
+
+  const onTopChromePointerLeave = useCallback(() => {
+    clearSceneTopMenuLeaveTimer();
+    setSceneTopMenuFromDockHover(false);
+  }, [clearSceneTopMenuLeaveTimer]);
+
   const tryEnableAudio = () => {
     setAudioEnabled(true);
     if (mode === "sunny") {
@@ -284,16 +322,20 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <ModeBar currentMode={mode} onModeChange={setMode} />
-      <FontBar
-        currentFont={font}
-        onFontChange={setFont}
-        currentSize={size}
-        onSizeChange={setSize}
+      <ModeBar
+        currentMode={mode}
+        onModeChange={setMode}
+        menuOpenExtra={sceneTopMenuFromDockHover}
+        onTopChromePointerEnter={onTopChromePointerEnter}
+        onTopChromePointerLeave={onTopChromePointerLeave}
       />
       <EditorPanel
         fontFamily={font}
         fontSize={size}
+        onFontChange={setFont}
+        onSizeChange={setSize}
+        onModeChange={setMode}
+        onSceneCycleTopMenuHover={onSceneCycleTopMenuHover}
         mode={mode}
         rainIntensity={rainIntensity}
         setRainIntensity={setRainIntensity}

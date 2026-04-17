@@ -9,6 +9,28 @@ export type SceneMode =
   | "thunder"
   | "sunny";
 
+/** 与顶栏场景顺序一致，用于编辑器内循环切换 */
+export const SCENE_MODE_CYCLE: readonly SceneMode[] = [
+  "sunny",
+  "rain",
+  "fog",
+  "snow",
+  "wind",
+  "thunder",
+] as const;
+
+export function sceneShortName(mode: SceneMode): string {
+  const names: Record<SceneMode, string> = {
+    sunny: "晴",
+    rain: "雨",
+    fog: "雾",
+    snow: "雪",
+    wind: "风",
+    thunder: "雷",
+  };
+  return names[mode];
+}
+
 export function sceneRainFamily(mode: SceneMode): boolean {
   return mode === "rain" || mode === "fog" || mode === "thunder";
 }

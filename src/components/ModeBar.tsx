@@ -26,20 +26,36 @@ const modes: {
 export function ModeBar({
   currentMode,
   onModeChange,
+  /** 由编辑卡片场景按钮悬停等触发，与顶栏 hover 共同决定菜单是否显示 */
+  menuOpenExtra = false,
+  /** 指针进入顶栏区域（含场景条）：用于与底部悬停衔接、取消关闭计时 */
+  onTopChromePointerEnter,
+  /** 指针离开整个顶栏区域 */
+  onTopChromePointerLeave,
 }: {
   currentMode: SceneMode;
   onModeChange: (m: SceneMode) => void;
+  menuOpenExtra?: boolean;
+  onTopChromePointerEnter?: () => void;
+  onTopChromePointerLeave?: () => void;
 }) {
   const [hover, setHover] = useState(false);
+  const open = hover || menuOpenExtra;
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-50 flex h-24 justify-center items-start pt-6"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      className="fixed top-0 left-0 right-0 z-[105] flex h-24 justify-center items-start pt-6"
+      onMouseEnter={() => {
+        setHover(true);
+        onTopChromePointerEnter?.();
+      }}
+      onMouseLeave={() => {
+        setHover(false);
+        onTopChromePointerLeave?.();
+      }}
     >
       <AnimatePresence>
-        {hover && (
+        {open && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}

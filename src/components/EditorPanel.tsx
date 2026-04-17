@@ -30,6 +30,7 @@ import { generateVectorPdfBlob } from "../pdf/vectorPdfExport";
 import "../mdx-editor-writespace.css";
 import type { SceneMode } from "../lib/sceneMode";
 import type { FontFamilyId, FontSizeId } from "./FontBar";
+import { EditorFontDock } from "./EditorFontDock";
 import { EditorSceneDock } from "./EditorSceneDock";
 import { PomodoroWidget } from "./PomodoroWidget";
 
@@ -222,22 +223,14 @@ const sizeClass: Record<FontSizeId, string> = {
   large: "text-xl md:text-2xl",
 };
 
-export function EditorPanel({
-  fontFamily,
-  fontSize,
-  mode,
-  rainIntensity,
-  setRainIntensity,
-  snowIntensity,
-  setSnowIntensity,
-  sunnyLight,
-  setSunnyLight,
-  environmentVolume,
-  setEnvironmentVolume,
-  onToggleEnvironmentAudio,
-}: {
+export type EditorPanelProps = {
   fontFamily: FontFamilyId;
   fontSize: FontSizeId;
+  onFontChange: (f: FontFamilyId) => void;
+  onSizeChange: (s: FontSizeId) => void;
+  onModeChange: (m: SceneMode) => void;
+  /** 场景循环钮悬停：联动顶部场景条 */
+  onSceneCycleTopMenuHover?: (active: boolean) => void;
   mode: SceneMode;
   rainIntensity: number;
   setRainIntensity: (v: number) => void;
@@ -248,7 +241,28 @@ export function EditorPanel({
   environmentVolume: number;
   setEnvironmentVolume: (v: number) => void;
   onToggleEnvironmentAudio?: () => void;
-}) {
+};
+
+export function EditorPanel(props: EditorPanelProps) {
+  const {
+    fontFamily,
+    fontSize,
+    onFontChange,
+    onSizeChange,
+    onModeChange,
+    onSceneCycleTopMenuHover,
+    mode,
+    rainIntensity,
+    setRainIntensity,
+    snowIntensity,
+    setSnowIntensity,
+    sunnyLight,
+    setSunnyLight,
+    environmentVolume,
+    setEnvironmentVolume,
+    onToggleEnvironmentAudio,
+  } = props;
+
   const [panel, setPanel] = useState<PanelState>(readPanel);
   const [resizing, setResizing] = useState(false);
   const dragRef = useRef<{
@@ -266,6 +280,8 @@ export function EditorPanel({
   const [releaseVisual, setReleaseVisual] = useState("");
   const [holdRelease, setHoldRelease] = useState(false);
   const mdxEditorRef = useRef<MDXEditorMethods>(null);
+  /** 整块编辑浮层，用于场景/音量弹出层定位在其底边下方居中 */
+  const panelAnchorRef = useRef<HTMLDivElement>(null);
 
   const mdxPlugins = useMemo(
     () => [
@@ -299,6 +315,10 @@ export function EditorPanel({
   useEffect(() => {
     if (!releasing) localStorage.setItem(STORAGE_KEY, text);
   }, [text, releasing]);
+
+  useEffect(() => {
+    if (!text.trim()) setSaveMenuOpen(false);
+  }, [text]);
 
   useEffect(() => {
     if (!releasing) {
@@ -645,6 +665,7 @@ export function EditorPanel({
 
   return (
     <div
+      ref={panelAnchorRef}
       className="pointer-events-auto fixed z-[45]"
       style={{
         left,
@@ -762,94 +783,101 @@ export function EditorPanel({
 
         <div className="pointer-events-none absolute inset-0 z-[2] rounded-[28px] shadow-[inset_0_0_100px_rgba(0,0,0,0.12)]" />
 
-        <div className="pointer-events-auto absolute bottom-6 left-8 right-8 z-[50] flex flex-wrap items-end justify-between gap-y-3 opacity-25 transition-opacity duration-500 group-hover:opacity-80">
-          <div className="flex min-w-0 flex-wrap items-end gap-3 sm:gap-4">
-          {charCount > 0 ? (
-            <span
-              className="pointer-events-none select-none font-kaiti text-sm tabular-nums tracking-widest text-white/30"
-              aria-live="polite"
-              title="按正文（Markdown 渲染为纯文本）统计的字符数"
-            >
-              {charCount.toLocaleString()} 字
-            </span>
-          ) : null}
-          <AnimatePresence mode="popLayout" initial={false}>
-            {saveMenuOpen ? (
-              <motion.div
-                key="save-menu"
-                className="flex translate-x-5 items-center gap-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                {[
-                  { key: "arrow", label: "←", onClick: () => setSaveMenuOpen(false) },
-                  { key: "back", label: "BACK", onClick: () => setSaveMenuOpen(false) },
-                  { key: "txt", label: "TXT", onClick: downloadTxt },
-                  { key: "pdf", label: "PDF", onClick: () => void downloadPdf() },
-                  { key: "word", label: "WORD", onClick: () => void downloadWord() },
-                ].map((item, idx) => (
-                  <motion.button
-                    key={item.key}
-                    type="button"
-                    onClick={item.onClick}
-                    disabled={item.key === "pdf" && exportingPdf}
-                    className="font-kaiti text-sm uppercase tracking-widest text-white/35 transition-all duration-300 hover:text-white/85"
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -12 }}
-                    transition={{ duration: 0.2, delay: idx * 0.06 }}
+        <div className="pointer-events-auto absolute bottom-6 left-8 right-8 z-[50] flex flex-wrap items-center justify-end gap-3 sm:gap-4 opacity-25 transition-opacity duration-500 group-hover:opacity-80">
+          {text.trim().length > 0 ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
+              {charCount > 0 && !saveMenuOpen ? (
+                <span
+                  className="pointer-events-none select-none font-kaiti text-sm tabular-nums tracking-widest text-white/30"
+                  aria-live="polite"
+                  title="按正文（Markdown 渲染为纯文本）统计的字符数"
+                >
+                  {charCount.toLocaleString()} 字
+                </span>
+              ) : null}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {saveMenuOpen ? (
+                  <motion.div
+                    key="save-menu"
+                    className="flex items-center gap-3"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                   >
-                    {item.key === "pdf" && exportingPdf ? "PDF..." : item.label}
+                    {[
+                      { key: "arrow", label: "←", onClick: () => setSaveMenuOpen(false) },
+                      { key: "back", label: "BACK", onClick: () => setSaveMenuOpen(false) },
+                      { key: "txt", label: "TXT", onClick: downloadTxt },
+                      { key: "pdf", label: "PDF", onClick: () => void downloadPdf() },
+                      { key: "word", label: "WORD", onClick: () => void downloadWord() },
+                    ].map((item, idx) => (
+                      <motion.button
+                        key={item.key}
+                        type="button"
+                        onClick={item.onClick}
+                        disabled={item.key === "pdf" && exportingPdf}
+                        className="font-kaiti text-sm uppercase tracking-widest text-white/35 transition-all duration-300 hover:text-white/85"
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -12 }}
+                        transition={{ duration: 0.2, delay: idx * 0.06 }}
+                      >
+                        {item.key === "pdf" && exportingPdf ? "PDF..." : item.label}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="save-button"
+                    type="button"
+                    onClick={() => setSaveMenuOpen(true)}
+                    disabled={releasing}
+                    className="font-kaiti text-sm uppercase tracking-widest text-white/30 transition-all duration-300 hover:text-white/80 disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    Save
                   </motion.button>
-                ))}
-              </motion.div>
-            ) : (
-              <motion.button
-                key="save-button"
-                type="button"
-                onClick={() => setSaveMenuOpen(true)}
-                disabled={releasing || !text.trim()}
-                className={cn(
-                  "font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
-                  "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
                 )}
-              >
-                Save
-              </motion.button>
-            )}
-          </AnimatePresence>
-          <AnimatePresence initial={false}>
-            {!saveMenuOpen && (
-              <motion.button
-                key="release-button"
-                type="button"
-                onMouseDown={startHold}
-                onMouseUp={cancelHold}
-                onMouseLeave={cancelHold}
-                onTouchStart={startHold}
-                onTouchEnd={cancelHold}
-                disabled={releasing || !text.trim()}
-                className={cn(
-                  "pointer-events-auto font-kaiti text-sm uppercase tracking-widest transition-all duration-300",
-                  "text-white/30 hover:text-white/80 disabled:pointer-events-none disabled:opacity-0",
-                  holdRelease && "scale-95 text-white/60",
+              </AnimatePresence>
+              <AnimatePresence initial={false}>
+                {!saveMenuOpen && (
+                  <motion.button
+                    key="release-button"
+                    type="button"
+                    onMouseDown={startHold}
+                    onMouseUp={cancelHold}
+                    onMouseLeave={cancelHold}
+                    onTouchStart={startHold}
+                    onTouchEnd={cancelHold}
+                    disabled={releasing}
+                    className={cn(
+                      "pointer-events-auto font-kaiti text-sm uppercase tracking-widest text-white/30 transition-all duration-300 hover:text-white/80 disabled:pointer-events-none disabled:opacity-40",
+                      holdRelease && "scale-95 text-white/60",
+                    )}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    Release
+                  </motion.button>
                 )}
-                initial={{ opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 8 }}
-                transition={{ duration: 0.18 }}
-              >
-                Release
-              </motion.button>
-            )}
-          </AnimatePresence>
-          </div>
-          <div className="flex shrink-0 items-center gap-3 sm:gap-5">
+              </AnimatePresence>
+            </div>
+          ) : null}
           <PomodoroWidget disabled={releasing} />
-          <EditorSceneDock
+          <EditorFontDock
+            anchorRef={panelAnchorRef}
             disabled={releasing}
-            exportDisabled={!text.trim()}
+            currentFont={fontFamily}
+            onFontChange={onFontChange}
+            currentSize={fontSize}
+            onSizeChange={onSizeChange}
+          />
+          <EditorSceneDock
+            anchorRef={panelAnchorRef}
+            disabled={releasing}
+            onModeChange={onModeChange}
+            onSceneCycleTopMenuHover={onSceneCycleTopMenuHover}
             mode={mode}
             rainIntensity={rainIntensity}
             setRainIntensity={setRainIntensity}
@@ -860,12 +888,7 @@ export function EditorPanel({
             environmentVolume={environmentVolume}
             setEnvironmentVolume={setEnvironmentVolume}
             onToggleAudio={onToggleEnvironmentAudio}
-            exportingPdf={exportingPdf}
-            onExportTxt={downloadTxt}
-            onExportPdf={() => void downloadPdf()}
-            onExportWord={() => void downloadWord()}
           />
-          </div>
         </div>
       </div>
     </div>
