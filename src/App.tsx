@@ -32,6 +32,7 @@ export default function App() {
   const [sunnyVol, setSunnyVol] = useState(0.45);
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [lightningBurst, setLightningBurst] = useState(0);
+  const [editorScrollProgress, setEditorScrollProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lightningRef = useRef<HTMLAudioElement | null>(null);
   const lightningTimersRef = useRef<number[]>([]);
@@ -161,15 +162,17 @@ export default function App() {
       strikes[Math.floor(Math.random() * strikes.length)]!;
 
     const storm = Math.max(0.05, Math.min(1, rainIntensity));
+    const scrollBoost = Math.max(0, Math.min(1, editorScrollProgress));
+    const activeStorm = Math.max(0.05, Math.min(1, storm + scrollBoost * 0.9));
     /** 雷暴越高 = 越近 = 闪后到声越短（ms） */
     const flashToSoundMs = () =>
-      Math.round(120 + (1 - storm) * 1050);
+      Math.round(90 + (1 - activeStorm) * 980);
     const strikeVolume = (mul = 1) =>
-      Math.min(1, effectiveVol * (0.38 + storm * 1.15) * mul);
+      Math.min(1, effectiveVol * (0.38 + activeStorm * 1.15) * mul);
 
     const nextGapMs = () => {
-      const lo = 9500 - storm * 7200;
-      const hi = 17500 - storm * 10500;
+      const lo = 8200 - activeStorm * 6900;
+      const hi = 15000 - activeStorm * 9800;
       return lo + Math.random() * Math.max(800, hi - lo);
     };
 
@@ -205,7 +208,7 @@ export default function App() {
         const url1 = pickStrikeUrl();
         const v1 = strikeVolume(1);
         const wantsDouble =
-          storm > 0.42 && Math.random() < storm * 0.52;
+          activeStorm > 0.42 && Math.random() < activeStorm * 0.52;
         queueStrike(url1, v1, () => {
           if (cancelled) return;
           if (wantsDouble) {
@@ -228,7 +231,7 @@ export default function App() {
 
     arm(
       runLightningEvent,
-      700 + Math.random() * (4200 - storm * 2800),
+      550 + Math.random() * (3200 - activeStorm * 2100),
     );
 
     return () => {
@@ -238,7 +241,7 @@ export default function App() {
       hit.removeAttribute("src");
       hit.load();
     };
-  }, [mode, audioEnabled, effectiveVol, rainIntensity]);
+  }, [mode, audioEnabled, effectiveVol, rainIntensity, editorScrollProgress]);
 
   const clearSceneTopMenuLeaveTimer = useCallback(() => {
     if (sceneTopMenuLeaveTimer.current != null) {
@@ -303,6 +306,7 @@ export default function App() {
               rainIntensity={rainIntensity}
               snowIntensity={snowIntensity}
               sunnyLight={sunnyLight}
+              thunderScrollBoost={editorScrollProgress}
             />
           </Suspense>
         </Canvas>
@@ -352,6 +356,7 @@ export default function App() {
               : setSnowVol
         }
         onToggleEnvironmentAudio={tryEnableAudio}
+        onContentScrollProgress={setEditorScrollProgress}
       />
 
       <div className="pointer-events-none fixed bottom-8 right-8 z-30 select-none text-white/30">

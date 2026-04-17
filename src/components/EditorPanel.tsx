@@ -241,6 +241,7 @@ export type EditorPanelProps = {
   environmentVolume: number;
   setEnvironmentVolume: (v: number) => void;
   onToggleEnvironmentAudio?: () => void;
+  onContentScrollProgress?: (progress: number) => void;
 };
 
 export function EditorPanel(props: EditorPanelProps) {
@@ -261,6 +262,7 @@ export function EditorPanel(props: EditorPanelProps) {
     environmentVolume,
     setEnvironmentVolume,
     onToggleEnvironmentAudio,
+    onContentScrollProgress,
   } = props;
 
   const [panel, setPanel] = useState<PanelState>(readPanel);
@@ -280,6 +282,7 @@ export function EditorPanel(props: EditorPanelProps) {
   const [releaseVisual, setReleaseVisual] = useState("");
   const [holdRelease, setHoldRelease] = useState(false);
   const mdxEditorRef = useRef<MDXEditorMethods>(null);
+  const editorShellRef = useRef<HTMLDivElement>(null);
   /** 整块编辑浮层，用于场景/音量弹出层定位在其底边下方居中 */
   const panelAnchorRef = useRef<HTMLDivElement>(null);
 
@@ -334,6 +337,26 @@ export function EditorPanel(props: EditorPanelProps) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (!onContentScrollProgress) return;
+    const shell = editorShellRef.current;
+    if (!shell) return;
+    const scrollHost = shell.querySelector(".mdxeditor-root-contenteditable");
+    if (!(scrollHost instanceof HTMLElement)) return;
+
+    const emitProgress = () => {
+      const max = Math.max(1, scrollHost.scrollHeight - scrollHost.clientHeight);
+      const ratio = Math.max(0, Math.min(1, scrollHost.scrollTop / max));
+      onContentScrollProgress(ratio);
+    };
+
+    emitProgress();
+    scrollHost.addEventListener("scroll", emitProgress, { passive: true });
+    return () => {
+      scrollHost.removeEventListener("scroll", emitProgress);
+    };
+  }, [onContentScrollProgress, text, panel.h]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -752,6 +775,7 @@ export function EditorPanel(props: EditorPanelProps) {
         </AnimatePresence>
 
         <div
+          ref={editorShellRef}
           className={cn(
             /* 内边距交给 MDX 内容区，与 flow-space textarea 的 p-10 md:p-16 一致 */
             "writespace-mdx-editor writespace-text-fade dark-theme relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden p-0",

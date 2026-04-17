@@ -158,78 +158,80 @@ export function PomodoroWidget({
         className,
       )}
     >
-      <div className="relative flex flex-col items-stretch">
+      <div className="flex shrink-0 items-baseline gap-0.5">
+        <div className="relative flex min-h-0 flex-col items-stretch justify-center">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              if (direction !== "countdown") return;
+              setPresetOpen((o) => !o);
+            }}
+            className={cn(
+              "min-w-[3.25rem] select-none rounded-md px-1 py-0.5 text-left font-mono text-sm leading-none tabular-nums tracking-tight text-white/85 transition-colors",
+              direction === "countdown" &&
+                "cursor-pointer hover:bg-white/10 hover:text-white",
+              direction === "stopwatch" && "cursor-default",
+              direction === "countdown" &&
+                leftSec <= 60 &&
+                leftSec > 0 &&
+                running &&
+                "text-amber-200/95",
+              direction === "countdown" && leftSec === 0 && "text-emerald-200/90",
+              presetOpen && direction === "countdown" && "bg-white/10 text-white",
+            )}
+            title={
+              direction === "countdown"
+                ? "选择专注时长"
+                : "累计计时（切为「倒」可选时长）"
+            }
+            aria-expanded={direction === "countdown" && presetOpen}
+            aria-haspopup={direction === "countdown" ? "listbox" : undefined}
+          >
+            {direction === "stopwatch"
+              ? formatStopwatchElapsed(displaySec)
+              : formatMmSs(displaySec)}
+          </button>
+          {presetOpen && direction === "countdown" ? (
+            <div
+              className="absolute bottom-full left-1/2 z-[90] mb-1.5 flex min-w-[6.5rem] -translate-x-1/2 flex-col gap-0.5 rounded-xl border border-white/20 bg-black/40 p-1 shadow-[0_10px_32px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150"
+              role="listbox"
+              aria-label="专注时长"
+            >
+              {PRESETS_MIN.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="option"
+                  aria-selected={totalSec === m * 60}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-left font-kaiti text-xs text-white/75 transition-colors hover:bg-white/10 hover:text-white",
+                    totalSec === m * 60 && "bg-white/10 text-white",
+                  )}
+                  onClick={() => applyPreset(m)}
+                >
+                  {PRESET_LABELS[m]}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <button
           type="button"
           disabled={disabled}
-          onClick={() => {
-            if (direction !== "countdown") return;
-            setPresetOpen((o) => !o);
-          }}
-          className={cn(
-            "min-w-[3.25rem] select-none rounded-md px-1 py-0.5 text-left font-mono text-sm tabular-nums tracking-tight text-white/85 transition-colors",
-            direction === "countdown" &&
-              "cursor-pointer hover:bg-white/10 hover:text-white",
-            direction === "stopwatch" && "cursor-default",
-            direction === "countdown" &&
-              leftSec <= 60 &&
-              leftSec > 0 &&
-              running &&
-              "text-amber-200/95",
-            direction === "countdown" && leftSec === 0 && "text-emerald-200/90",
-            presetOpen && direction === "countdown" && "bg-white/10 text-white",
-          )}
-          title={
+          onClick={toggleDirection}
+          className="flex min-w-[1.125rem] shrink-0 select-none items-baseline justify-center rounded-md px-0.5 py-0.5 font-kaiti text-sm leading-none text-white/75 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
+          title={direction === "countdown" ? "切换为累计计时" : "切换为倒数计时"}
+          aria-label={
             direction === "countdown"
-              ? "选择专注时长"
-              : "累计计时（切为「倒」可选时长）"
+              ? "当前为倒数，点击切换为累计"
+              : "当前为累计，点击切换为倒数"
           }
-          aria-expanded={direction === "countdown" && presetOpen}
-          aria-haspopup={direction === "countdown" ? "listbox" : undefined}
         >
-          {direction === "stopwatch"
-            ? formatStopwatchElapsed(displaySec)
-            : formatMmSs(displaySec)}
+          {direction === "countdown" ? "倒" : "累"}
         </button>
-        {presetOpen && direction === "countdown" ? (
-          <div
-            className="absolute bottom-full left-1/2 z-[90] mb-1.5 flex min-w-[6.5rem] -translate-x-1/2 flex-col gap-0.5 rounded-xl border border-white/20 bg-black/40 p-1 shadow-[0_10px_32px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150"
-            role="listbox"
-            aria-label="专注时长"
-          >
-            {PRESETS_MIN.map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="option"
-                aria-selected={totalSec === m * 60}
-                className={cn(
-                  "rounded-lg px-3 py-2 text-left font-kaiti text-xs text-white/75 transition-colors hover:bg-white/10 hover:text-white",
-                  totalSec === m * 60 && "bg-white/10 text-white",
-                )}
-                onClick={() => applyPreset(m)}
-              >
-                {PRESET_LABELS[m]}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={toggleDirection}
-        className="min-w-[1.35rem] select-none rounded-md px-0.5 py-0.5 font-kaiti text-xs leading-none text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-40"
-        title={direction === "countdown" ? "切换为累计计时" : "切换为倒数计时"}
-        aria-label={
-          direction === "countdown"
-            ? "当前为倒数，点击切换为累计"
-            : "当前为累计，点击切换为倒数"
-        }
-      >
-        {direction === "countdown" ? "倒" : "累"}
-      </button>
-      <div className="mx-0.5 h-5 w-px bg-white/15" aria-hidden />
+      <div className="mx-0.5 h-5 w-px shrink-0 self-center bg-white/15" aria-hidden />
       <button
         type="button"
         disabled={disabled}

@@ -7,6 +7,7 @@ import type { SceneMode } from "../lib/sceneMode";
 import { rainFragment, rainVertex } from "../shaders/rain";
 import { snowFragment, snowVertex } from "../shaders/snow";
 import { sunnyFragment, sunnyVertex } from "../shaders/sunny";
+import { thunderFragment, thunderVertex } from "../shaders/thunder";
 
 export type { SceneMode } from "../lib/sceneMode";
 
@@ -224,16 +225,61 @@ function SunnyPlane({
   );
 }
 
+function ThunderPlane({
+  stormIntensity,
+  scrollBoost,
+}: {
+  stormIntensity: number;
+  scrollBoost: number;
+}) {
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const { size, viewport } = useThree();
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uStormIntensity: { value: stormIntensity },
+      uScrollBoost: { value: scrollBoost },
+    }),
+    [],
+  );
+
+  useFrame((state) => {
+    const m = materialRef.current;
+    if (!m) return;
+    m.uniforms.uTime.value = state.clock.getElapsedTime();
+    m.uniforms.uResolution.value.set(size.width, size.height);
+    m.uniforms.uStormIntensity.value = stormIntensity;
+    m.uniforms.uScrollBoost.value = scrollBoost;
+  });
+
+  return (
+    <mesh scale={[viewport.width, viewport.height, 1]}>
+      <planeGeometry args={[1, 1]} />
+      <shaderMaterial
+        ref={materialRef}
+        fragmentShader={thunderFragment}
+        vertexShader={thunderVertex}
+        uniforms={uniforms}
+        depthWrite={false}
+        depthTest={false}
+      />
+    </mesh>
+  );
+}
+
 export function BackgroundScene({
   mode,
   rainIntensity,
   snowIntensity,
   sunnyLight,
+  thunderScrollBoost = 0,
 }: {
   mode: SceneMode;
   rainIntensity: number;
   snowIntensity: number;
   sunnyLight: number;
+  thunderScrollBoost?: number;
 }) {
   switch (mode) {
     case "sunny":
@@ -268,12 +314,9 @@ export function BackgroundScene({
       );
     case "thunder":
       return (
-        <RainPlane
-          intensity={rainIntensity}
-          mistBlend={0.22}
-          storm={1}
+        <ThunderPlane
           stormIntensity={rainIntensity}
-          backgroundUrl={ASSETS.thunderBackground}
+          scrollBoost={thunderScrollBoost}
           key="thunder"
         />
       );
